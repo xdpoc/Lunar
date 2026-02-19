@@ -1,11 +1,11 @@
 --[[
     scoot ui library
     made by samet
+    Modified for Mobile & Arc Client Integration
     
     https://discord.gg/VhvTd5HV8d
     ^^ join for custom commissions
 
-    example/documentation is at the bottom
     date: 19.07.2025
 ]]
 
@@ -24,6 +24,10 @@ local Library do
     local CoreGui = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
     local GuiService = game:GetService("GuiService")
+    local StarterGui = game:GetService("StarterGui")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Teams = game:GetService("Teams")
+    local Debris = game:GetService("Debris")
 
     gethui = gethui or function()
         return CoreGui
@@ -70,9 +74,9 @@ local Library do
 
     local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
     
-    -- Mobile scale factor
-    local MobileScale = IsMobile and 0.65 or 1
-    local MobilePositionOffset = IsMobile and UDim2New(0, 0, 0, 50) or UDim2New(0, 0, 0, 0)
+    -- Mobile scale factor - MUCH SMALLER for mobile
+    local MobileScale = IsMobile and 0.45 or 1  -- Reduced from 0.65 to 0.45 for smaller UI
+    local MobilePositionOffset = IsMobile and UDim2New(0, 0, 0, 0) or UDim2New(0, 0, 0, 0)  -- Removed offset
 
     Library = {
         Theme =  { },
@@ -356,7 +360,7 @@ local Library do
         Instances.__index = Instances
 
         Instances.Create = function(self, Class, Properties)
-            -- Scale sizes for mobile
+            -- Scale sizes for mobile - MUCH SMALLER
             if Library.IsMobile and Properties.Size and Class ~= "ScreenGui" then
                 if typeof(Properties.Size) == "UDim2" then
                     -- Scale offset values
@@ -726,7 +730,7 @@ local Library do
         PaddingLeft = UDimNew(0, 12)
     })
 
-    -- Mobile control buttons
+    -- Mobile control buttons - TOP LEFT corner
     if Library.IsMobile then
         Library.MobileLockButton = Instances:Create("TextButton", {
             Parent = Library.Holder.Instance,
@@ -734,14 +738,15 @@ local Library do
             FontFace = Library.Font,
             TextColor3 = FromRGB(235, 235, 235),
             BorderColor3 = FromRGB(12, 12, 12),
-            Text = "🔒 Lock UI",
+            Text = "🔒",
             AutoButtonColor = false,
-            Size = UDim2New(0, 80, 0, 30),
-            Position = UDim2New(1, -90, 1, -40),
+            Size = UDim2New(0, 40, 0, 40),
+            Position = UDim2New(0, 10, 0, 60),  -- Top left, below Roblox menu
             BorderSizePixel = 2,
-            TextSize = 12,
+            TextSize = 20,
             BackgroundColor3 = FromRGB(30, 36, 31),
-            ZIndex = 10
+            ZIndex = 10,
+            BackgroundTransparency = 0.3
         })  
         
         Library.MobileLockButton:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border", TextColor3 = "Text"})
@@ -753,14 +758,15 @@ local Library do
             FontFace = Library.Font,
             TextColor3 = FromRGB(235, 235, 235),
             BorderColor3 = FromRGB(12, 12, 12),
-            Text = "👁️ Hide",
+            Text = "👁️",
             AutoButtonColor = false,
-            Size = UDim2New(0, 80, 0, 30),
-            Position = UDim2New(1, -90, 1, -75),
+            Size = UDim2New(0, 40, 0, 40),
+            Position = UDim2New(0, 60, 0, 60),  -- Next to lock button
             BorderSizePixel = 2,
-            TextSize = 12,
+            TextSize = 20,
             BackgroundColor3 = FromRGB(30, 36, 31),
-            ZIndex = 10
+            ZIndex = 10,
+            BackgroundTransparency = 0.3
         })  
         
         Library.MobileToggleButton:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border", TextColor3 = "Text"})
@@ -1007,10 +1013,10 @@ local Library do
         self.MobileUIEnabled = not self.MobileUIEnabled
         
         if self.MobileUIEnabled then
-            self.MobileToggleButton.Instance.Text = "👁️ Hide"
+            self.MobileToggleButton.Instance.Text = "👁️"
             self.Holder.Instance.Enabled = true
         else
-            self.MobileToggleButton.Instance.Text = "👁️ Show"
+            self.MobileToggleButton.Instance.Text = "👁️"
             self.Holder.Instance.Enabled = false
         end
     end
@@ -1019,7 +1025,7 @@ local Library do
         self.MobileUILocked = not self.MobileUILocked
         
         if self.MobileUILocked then
-            self.MobileLockButton.Instance.Text = "🔓 Unlock UI"
+            self.MobileLockButton.Instance.Text = "🔓"
             -- Make UI non-interactable but still visible
             for _, v in pairs(self.Holder.Instance:GetDescendants()) do
                 if v:IsA("TextButton") or v:IsA("TextBox") or v:IsA("ScrollingFrame") then
@@ -1028,7 +1034,7 @@ local Library do
                 end
             end
         else
-            self.MobileLockButton.Instance.Text = "🔒 Lock UI"
+            self.MobileLockButton.Instance.Text = "🔒"
             -- Make UI interactable again
             for _, v in pairs(self.Holder.Instance:GetDescendants()) do
                 if v:IsA("TextButton") or v:IsA("TextBox") or v:IsA("ScrollingFrame") then
@@ -1054,7 +1060,7 @@ local Library do
     local Components = { } do
         Components.Window = function(self, Data)
             local Items = { } do
-                -- Scale window size for mobile
+                -- Scale window size for mobile - MUCH SMALLER
                 local windowSize = Data.Size
                 if Library.IsMobile then
                     windowSize = UDim2New(
@@ -1069,7 +1075,7 @@ local Library do
                     Parent = Data.Parent.Instance,
                     Name = "\0",
                     AnchorPoint = Data.AnchorPoint,
-                    Position = Data.Position + MobilePositionOffset,
+                    Position = Data.Position,
                     BorderColor3 = FromRGB(12, 12, 12),
                     Size = windowSize,
                     BorderSizePixel = 2,
@@ -1104,7 +1110,7 @@ local Library do
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.XY,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Label"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1139,7 +1145,7 @@ local Library do
                     BackgroundTransparency = 0.6000000238418579,
                     Size = UDim2New(1, 0, 0, 25),
                     BorderSizePixel = 2,
-                    TextSize = Library.IsMobile and 12 or 14,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(25, 30, 26)
                 })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Border"})
 
@@ -1175,7 +1181,7 @@ local Library do
                     Position = UDim2New(0, 8, 0.5, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1397,7 +1403,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 20),
                     BorderSizePixel = 2,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 14,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(25, 30, 26)
                 })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Border"})
 
@@ -1423,7 +1429,7 @@ local Library do
                     Position = UDim2New(0.5, -5, 0.5, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1683,7 +1689,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1826,7 +1832,7 @@ local Library do
                         AutoButtonColor = false,
                         Size = UDim2New(1, 0, 0, 20),
                         BorderSizePixel = 2,
-                        TextSize = Library.IsMobile and 12 or 14,
+                        TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                         BackgroundColor3 = FromRGB(30, 36, 31)
                     })  SubItems["NewButton"]:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border"})
 
@@ -1857,7 +1863,7 @@ local Library do
                         BackgroundTransparency = 1,
                         Size = UDim2New(1, 0, 1, 0),
                         BorderSizePixel = 0,
-                        TextSize = Library.IsMobile and 12 or 9,
+                        TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                         BackgroundColor3 = FromRGB(255, 255, 255)
                     })  SubItems["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1943,7 +1949,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 15),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2029,7 +2035,7 @@ local Library do
                     Position = UDim2New(1, 0, 0, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Value"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2143,7 +2149,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2214,7 +2220,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 15),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2230,6 +2236,7 @@ local Library do
                     BorderColor3 = FromRGB(12, 12, 12),
                     Size = UDim2New(1, 0, 0, 20),
                     BorderSizePixel = 2,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(30, 36, 31)
                 })  Items["RealDropdown"]:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border"})
 
@@ -2263,7 +2270,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Position = UDim2New(0, 8, 0.5, 0),
                     BorderSizePixel = 0,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Value"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2468,7 +2475,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Size = UDim2New(1, 0, 0, 15),
                     ZIndex = 5,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  OptionButton:AddToTheme({TextColor3 = "Text"})
 
@@ -2629,7 +2636,7 @@ local Library do
                     AutoButtonColor = false,
                     Size = UDim2New(1, 0, 1, 0),
                     BorderSizePixel = 0,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(20, 24, 21)
                 })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Inline"})
 
@@ -2693,7 +2700,7 @@ local Library do
                 Position = UDim2New(0, 8, 0, 8),
                 Size = UDim2New(1, -41, 1, -41),
                 BorderSizePixel = 2,
-                TextSize = Library.IsMobile and 12 or 14,
+                TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                 BackgroundColor3 = FromRGB(157, 175, 255)
             })  Items["Palette"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -2817,7 +2824,7 @@ local Library do
                 Position = UDim2New(0, 8, 1, -8),
                 Size = UDim2New(1, -41, 0, 15),
                 BorderSizePixel = 2,
-                TextSize = Library.IsMobile and 12 or 14,
+                TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                 BackgroundColor3 = FromRGB(157, 175, 255)
             })  Items["Alpha"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -2868,7 +2875,7 @@ local Library do
             }):AddToTheme({Color = "Border"})
         end
 
-        Components.Colorpicker = function(self, Data) -- poetry warning (╯°□°)╯
+        Components.Colorpicker = function(self, Data)
             local Colorpicker = {
                 IsOpen = false,
 
@@ -2898,7 +2905,7 @@ local Library do
                     Position = UDim2New(0, -123, 0, 0),
                     Size = UDim2New(0, 15, 0, 15),
                     BorderSizePixel = 2,
-                    TextSize = Library.IsMobile and 12 or 14,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(157, 175, 255)
                 })  Items["ColorpickerButton"]:AddToTheme({BorderColor3 = "Border"})
 
@@ -3032,7 +3039,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 8),
                     Size = UDim2New(1, -46, 1, -46),
                     BorderSizePixel = 2,
-                    TextSize = Library.IsMobile and 12 or 14,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(157, 175, 255)
                 })  Items["Palette"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -3156,7 +3163,7 @@ local Library do
                     Position = UDim2New(0, 8, 1, -8),
                     Size = UDim2New(1, -46, 0, 20),
                     BorderSizePixel = 2,
-                    TextSize = Library.IsMobile and 12 or 14,
+                    TextSize = Library.IsMobile and 16 or 14,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(157, 175, 255)
                 })  Items["Alpha"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -3405,7 +3412,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     RichText = true,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
@@ -3422,7 +3429,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     RichText = true,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
@@ -3439,7 +3446,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     RichText = true,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
@@ -3850,7 +3857,7 @@ local Library do
                     BorderSizePixel = 0,
                     BorderColor3 = FromRGB(0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["KeyButton"]:AddToTheme({TextColor3 = "Text"})
                 
@@ -3877,7 +3884,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 8),
                     Size = UDim2New(1, -16, 0, 20),
                     BorderSizePixel = 0,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(202, 243, 255)
                 })  Items["Toggle"]:AddToTheme({BackgroundColor3 = "Accent", TextColor3 = "Text"})
 
@@ -3903,7 +3910,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 38),
                     Size = UDim2New(1, -16, 0, 20),
                     BorderSizePixel = 0,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(202, 243, 255)
                 })  Items["Hold"]:AddToTheme({BackgroundColor3 = "Accent", TextColor3 = "Text"})
 
@@ -3921,7 +3928,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 68),
                     Size = UDim2New(1, -16, 0, 20),
                     BorderSizePixel = 0,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(202, 243, 255)
                 })  Items["Always"]:AddToTheme({BackgroundColor3 = "Accent", TextColor3 = "Text"})  
 
@@ -4271,7 +4278,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 15),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4311,7 +4318,7 @@ local Library do
                     FontFace = Library.Font,
                     PlaceholderColor3 = FromRGB(185, 185, 185),
                     PlaceholderText = Data.Placeholder,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     Size = UDim2New(1, 0, 1, 0),
                     ClipsDescendants = true,
                     BorderColor3 = FromRGB(0, 0, 0),
@@ -4382,7 +4389,7 @@ local Library do
             return Textbox, Items
         end
 
-        Components.Searchbox = function(self, Data) -- just pasted the entire dropdown fucntion with different instances, i cant be asked to make a whole new functionality
+        Components.Searchbox = function(self, Data)
             local Dropdown = {
                 Flag = Data.Flag, 
                 Value = { },
@@ -4449,7 +4456,7 @@ local Library do
                     PlaceholderColor3 = FromRGB(185, 185, 185),
                     AutomaticSize = Enum.AutomaticSize.X,
                     PlaceholderText = "search..",
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Input"]:AddToTheme({TextColor3 = "Text", PlaceholderColor3 = "Placeholder Text"})
 
@@ -4595,7 +4602,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Size = UDim2New(1, 0, 0, 20),
                     ZIndex = 1,
-                    TextSize = Library.IsMobile and 12 or 9,
+                    TextSize = Library.IsMobile and 14 or 9,  -- Larger text for mobile
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  OptionButton:AddToTheme({TextColor3 = "Text"})
 
@@ -4747,7 +4754,7 @@ local Library do
                 Parent = Library.Holder.Instance,
                 Name = "\0",
                 AnchorPoint = Vector2New(0.5, 1),
-                Position = UDim2New(0.5, 0, 1, -12) + MobilePositionOffset,
+                Position = UDim2New(0.5, 0, 1, -12),
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -4785,7 +4792,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.XY,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4818,7 +4825,7 @@ local Library do
                 Parent = Library.Holder.Instance,
                 Name = "\0",
                 AnchorPoint = Vector2New(0, 0.5),
-                Position = UDim2New(0, 12, 0.5, 55) + MobilePositionOffset,
+                Position = UDim2New(0, 12, 0.5, 55),
                 BorderColor3 = FromRGB(12, 12, 12),
                 Size = UDim2New(0, 116, 0, 32),
                 BorderSizePixel = 2,
@@ -4847,7 +4854,7 @@ local Library do
                 Position = UDim2New(0, 0, 0, -4),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4905,7 +4912,7 @@ local Library do
                 AutomaticSize = Enum.AutomaticSize.X,
                 TextTransparency = 1,
                 Visible = false,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
@@ -4976,7 +4983,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.XY,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4995,7 +5002,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderColor3 = FromRGB(0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.XY,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Description"]:AddToTheme({TextColor3 = "Text"})
 
@@ -5068,7 +5075,7 @@ local Library do
             Items["InventoryViewer"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                Position = UDim2New(0.007766990456730127, 0, 0.11442785710096359, 0) + MobilePositionOffset,
+                Position = UDim2New(0.007766990456730127, 0, 0.11442785710096359, 0),
                 BorderColor3 = FromRGB(12, 12, 12),
                 Size = UDim2New(0, 325, 0, 277),
                 BorderSizePixel = 2,
@@ -5095,7 +5102,7 @@ local Library do
                 Position = UDim2New(0, 8, 0, 4),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
@@ -5183,7 +5190,7 @@ local Library do
                 Position = UDim2New(0, 75, 1, -55),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["PlayerHealth"]:AddToTheme({TextColor3 = "Text"})
 
@@ -5200,7 +5207,7 @@ local Library do
                 Position = UDim2New(0, 75, 1, -35),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["PlayerDistance"]:AddToTheme({TextColor3 = "Text"})
         end
@@ -5288,7 +5295,7 @@ local Library do
             IsOpen = false,
         }
 
-        -- Scale window size for mobile
+        -- Scale window size for mobile - MUCH SMALLER
         if Library.IsMobile then
             Window.Size = UDim2New(
                 Data.Size.X.Scale,
@@ -5379,7 +5386,7 @@ local Library do
                 PlaceholderColor3 = FromRGB(185, 185, 185),
                 AutomaticSize = Enum.AutomaticSize.X,
                 PlaceholderText = "..",
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Input"]:AddToTheme({TextColor3 = "Text", PlaceholderColor3 = "Placeholder Text"})
 
@@ -5737,7 +5744,7 @@ local Library do
                 Position = UDim2New(0, 6, 0, 5),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -6152,7 +6159,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = Library.IsMobile and 12 or 9,
+                TextSize = Library.IsMobile and 14 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -6339,235 +6346,1320 @@ local Library do
     end
 end
 
+-- Create main window
 local Window = Library:Window({
     Logo = "77218680285262",
     FadeTime = 0.3,
 })
 
-local Watermark = Library:Watermark("This is a watermark")
+local Watermark = Library:Watermark("Arc Client | Combat Edition")
 local KeybindList = Library:KeybindList()
 
-do 
-    local CombatPage = Window:Page({Name = "Combat", SubPages = true})
-    local PlayerPage = Window:Page({Name = "Player", Columns = 2})
-    local VisualsPage = Window:Page({Name = "Visuals", Columns = 2})
-    local PlayersPage = Window:Page({Name = "Players", Columns = 2})
-    local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList) 
+-- Create pages
+local MainTab = Window:Page({Name = "Main", Columns = 2})
+local AimTab = Window:Page({Name = "Aim", Columns = 2})
+local TargetingTab = Window:Page({Name = "Targeting", Columns = 2})
+local HitTab = Window:Page({Name = "Hit Chance", Columns = 2})
+local AutoTab = Window:Page({Name = "Auto", Columns = 2})
+local ShieldTab = Window:Page({Name = "Shield", Columns = 2})
+local TaserTab = Window:Page({Name = "Taser", Columns = 2})
+local PrisonTab = Window:Page({Name = "Prison Life", Columns = 2})
+local ESPTab = Window:Page({Name = "ESP/Visuals", Columns = 2})
+local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList)
+
+-- ============= Arc Client Script Integration =============
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local Teams = game:GetService("Teams")
+local HttpService = game:GetService("HttpService")
+local StarterGui = game:GetService("StarterGui")
+local Debris = game:GetService("Debris")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
+
+local Guards = Teams:FindFirstChild("Guards")
+local Inmates = Teams:FindFirstChild("Inmates")
+local Criminals = Teams:FindFirstChild("Criminals")
+
+-- Configuration
+local ArcConfig = {
+    Enabled = false,
+    TeamCheck = false,
+    WallCheck = false,
+    DeathCheck = false,
+    ForcefieldCheck = false,
+    VehicleCheck = false,
+    HostileCheck = false,
+    TrespassCheck = false,
+    CriminalsNoInmates = false,
+    InmatesNoCriminals = false,
+    ShieldBreaker = false,
+    ShieldFrontAngle = 0.3,
+    ShieldRandomHead = false,
+    ShieldHeadChance = 0,
+    TaserBypassHostile = false,
+    TaserBypassTrespass = false,
+    TaserAlwaysHit = false,
+    IfPlayerStill = false,
+    StillThreshold = 0.5,
+    Hitchance = 0,
+    HitchanceAutoOnly = false,
+    AutoShoot = false,
+    AutoShootDelay = 0.12,
+    AutoShootStartDelay = 0.2,
+    MissSpread = 0,
+    ShotgunNaturalSpread = false,
+    ShotgunGameHandled = false,
+    PrioritizeClosest = false,
+    TargetStickiness = false,
+    TargetStickinessDuration = 0.6,
+    TargetStickinessRandom = false,
+    TargetStickinessMin = 0.3,
+    TargetStickinessMax = 0.7,
+    FOV = 100,
+    ShowFOV = false,
+    ShowTargetLine = false,
+    ToggleKey = Enum.KeyCode.RightShift,
+    AimPart = "Head",
+    RandomParts = false,
+    PartsList = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "HumanoidRootPart"},
+    ESP = {
+        Enabled = false,
+        Box = false,
+        Name = false,
+        Health = false,
+        Distance = false,
+        Tracer = false,
+        TeamColors = true,
+        MaxDistance = 1000,
+        TracerStartPoint = "Mouse",
+    },
+}
+
+-- Main Tab
+local MainSection = MainTab:Section({Name = "Main Settings", Side = 1})
+local FOVSection = MainTab:Section({Name = "FOV Settings", Side = 2})
+
+MainSection:Toggle({
+    Name = "Enable Script",
+    Flag = "ArcEnabled",
+    Default = false,
+    Callback = function(v) ArcConfig.Enabled = v end
+})
+
+MainSection:Dropdown({
+    Name = "Aim Part",
+    Items = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "HumanoidRootPart"},
+    Default = "Head",
+    Flag = "ArcAimPart",
+    Callback = function(v) ArcConfig.AimPart = v end
+})
+
+MainSection:Toggle({
+    Name = "Random Parts",
+    Flag = "ArcRandomParts",
+    Default = false,
+    Callback = function(v) ArcConfig.RandomParts = v end
+})
+
+FOVSection:Toggle({
+    Name = "Show FOV",
+    Flag = "ArcShowFOV",
+    Default = false,
+    Callback = function(v) ArcConfig.ShowFOV = v end
+})
+
+FOVSection:Toggle({
+    Name = "Show Target Line",
+    Flag = "ArcShowTargetLine",
+    Default = false,
+    Callback = function(v) ArcConfig.ShowTargetLine = v end
+})
+
+FOVSection:Slider({
+    Name = "FOV Size",
+    Range = {50, 500},
+    Increment = 5,
+    Default = 150,
+    Flag = "ArcFOV",
+    Suffix = "px",
+    Callback = function(v) ArcConfig.FOV = v end
+})
+
+-- Aim Tab
+local AimSection = AimTab:Section({Name = "Aim Checks", Side = 1})
+local MiscAimSection = AimTab:Section({Name = "Misc Aim", Side = 2})
+
+AimSection:Toggle({
+    Name = "Team Check",
+    Flag = "ArcTeamCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.TeamCheck = v end
+})
+
+AimSection:Toggle({
+    Name = "Wall Check",
+    Flag = "ArcWallCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.WallCheck = v end
+})
+
+AimSection:Toggle({
+    Name = "Death Check",
+    Flag = "ArcDeathCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.DeathCheck = v end
+})
+
+AimSection:Toggle({
+    Name = "Forcefield Check",
+    Flag = "ArcForcefieldCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.ForcefieldCheck = v end
+})
+
+AimSection:Toggle({
+    Name = "Vehicle Check",
+    Flag = "ArcVehicleCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.VehicleCheck = v end
+})
+
+-- Targeting Tab
+local TargetingSection = TargetingTab:Section({Name = "Targeting Settings", Side = 1})
+
+TargetingSection:Toggle({
+    Name = "Prioritize Closest",
+    Flag = "ArcPrioritizeClosest",
+    Default = false,
+    Callback = function(v) ArcConfig.PrioritizeClosest = v end
+})
+
+TargetingSection:Toggle({
+    Name = "Target Stickiness",
+    Flag = "ArcTargetStickiness",
+    Default = false,
+    Callback = function(v) ArcConfig.TargetStickiness = v end
+})
+
+TargetingSection:Slider({
+    Name = "Stickiness Duration",
+    Range = {0.1, 2},
+    Increment = 0.1,
+    Default = 0.6,
+    Flag = "ArcStickinessDuration",
+    Suffix = "s",
+    Callback = function(v) ArcConfig.TargetStickinessDuration = v end
+})
+
+TargetingSection:Toggle({
+    Name = "Random Stickiness",
+    Flag = "ArcStickinessRandom",
+    Default = false,
+    Callback = function(v) ArcConfig.TargetStickinessRandom = v end
+})
+
+TargetingSection:Slider({
+    Name = "Stickiness Min",
+    Range = {0.1, 1},
+    Increment = 0.1,
+    Default = 0.3,
+    Flag = "ArcStickinessMin",
+    Callback = function(v) ArcConfig.TargetStickinessMin = v end
+})
+
+TargetingSection:Slider({
+    Name = "Stickiness Max",
+    Range = {0.1, 2},
+    Increment = 0.1,
+    Default = 0.7,
+    Flag = "ArcStickinessMax",
+    Callback = function(v) ArcConfig.TargetStickinessMax = v end
+})
+
+-- Hit Tab
+local HitSection = HitTab:Section({Name = "Hit Chance Settings", Side = 1})
+
+HitSection:Slider({
+    Name = "Hitchance",
+    Range = {0, 100},
+    Increment = 1,
+    Default = 0,
+    Flag = "ArcHitchance",
+    Suffix = "%",
+    Callback = function(v) ArcConfig.Hitchance = v end
+})
+
+HitSection:Toggle({
+    Name = "Auto Only",
+    Flag = "ArcHitchanceAutoOnly",
+    Default = false,
+    Callback = function(v) ArcConfig.HitchanceAutoOnly = v end
+})
+
+HitSection:Slider({
+    Name = "Miss Spread",
+    Range = {0, 20},
+    Increment = 1,
+    Default = 0,
+    Flag = "ArcMissSpread",
+    Suffix = "studs",
+    Callback = function(v) ArcConfig.MissSpread = v end
+})
+
+HitSection:Toggle({
+    Name = "If Player Still",
+    Flag = "ArcIfPlayerStill",
+    Default = false,
+    Callback = function(v) ArcConfig.IfPlayerStill = v end
+})
+
+HitSection:Slider({
+    Name = "Still Threshold",
+    Range = {0.1, 2},
+    Increment = 0.1,
+    Default = 0.5,
+    Flag = "ArcStillThreshold",
+    Callback = function(v) ArcConfig.StillThreshold = v end
+})
+
+-- Auto Tab
+local AutoSection = AutoTab:Section({Name = "Auto Settings", Side = 1})
+
+AutoSection:Toggle({
+    Name = "Auto Shoot",
+    Flag = "ArcAutoShoot",
+    Default = false,
+    Callback = function(v) ArcConfig.AutoShoot = v end
+})
+
+AutoSection:Slider({
+    Name = "Auto Shoot Delay",
+    Range = {0.05, 0.5},
+    Increment = 0.01,
+    Default = 0.12,
+    Flag = "ArcAutoShootDelay",
+    Suffix = "s",
+    Callback = function(v) ArcConfig.AutoShootDelay = v end
+})
+
+AutoSection:Slider({
+    Name = "Start Delay",
+    Range = {0, 0.5},
+    Increment = 0.01,
+    Default = 0.2,
+    Flag = "ArcAutoShootStartDelay",
+    Suffix = "s",
+    Callback = function(v) ArcConfig.AutoShootStartDelay = v end
+})
+
+-- Shield Tab
+local ShieldSection = ShieldTab:Section({Name = "Shield Settings", Side = 1})
+
+ShieldSection:Toggle({
+    Name = "Shield Breaker",
+    Flag = "ArcShieldBreaker",
+    Default = false,
+    Callback = function(v) ArcConfig.ShieldBreaker = v end
+})
+
+ShieldSection:Slider({
+    Name = "Shield Front Angle",
+    Range = {0.1, 1},
+    Increment = 0.1,
+    Default = 0.3,
+    Flag = "ArcShieldFrontAngle",
+    Callback = function(v) ArcConfig.ShieldFrontAngle = v end
+})
+
+ShieldSection:Toggle({
+    Name = "Random Headshots",
+    Flag = "ArcShieldRandomHead",
+    Default = false,
+    Callback = function(v) ArcConfig.ShieldRandomHead = v end
+})
+
+ShieldSection:Slider({
+    Name = "Headshot Chance",
+    Range = {0, 100},
+    Increment = 1,
+    Default = 0,
+    Flag = "ArcShieldHeadChance",
+    Suffix = "%",
+    Callback = function(v) ArcConfig.ShieldHeadChance = v end
+})
+
+-- Taser Tab
+local TaserSection = TaserTab:Section({Name = "Taser Settings", Side = 1})
+
+TaserSection:Toggle({
+    Name = "Taser Always Hit",
+    Flag = "ArcTaserAlwaysHit",
+    Default = false,
+    Callback = function(v) ArcConfig.TaserAlwaysHit = v end
+})
+
+TaserSection:Toggle({
+    Name = "Bypass Hostile Check",
+    Flag = "ArcTaserBypassHostile",
+    Default = false,
+    Callback = function(v) ArcConfig.TaserBypassHostile = v end
+})
+
+TaserSection:Toggle({
+    Name = "Bypass Trespass Check",
+    Flag = "ArcTaserBypassTrespass",
+    Default = false,
+    Callback = function(v) ArcConfig.TaserBypassTrespass = v end
+})
+
+-- Prison Tab
+local PrisonSection = PrisonTab:Section({Name = "Prison Life Settings", Side = 1})
+
+PrisonSection:Toggle({
+    Name = "Hostile Check",
+    Flag = "ArcHostileCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.HostileCheck = v end
+})
+
+PrisonSection:Toggle({
+    Name = "Trespass Check",
+    Flag = "ArcTrespassCheck",
+    Default = false,
+    Callback = function(v) ArcConfig.TrespassCheck = v end
+})
+
+PrisonSection:Toggle({
+    Name = "Criminals Don't Shoot Inmates",
+    Flag = "ArcCriminalsNoInmates",
+    Default = false,
+    Callback = function(v) ArcConfig.CriminalsNoInmates = v end
+})
+
+PrisonSection:Toggle({
+    Name = "Inmates Don't Shoot Criminals",
+    Flag = "ArcInmatesNoCriminals",
+    Default = false,
+    Callback = function(v) ArcConfig.InmatesNoCriminals = v end
+})
+
+-- ESP Tab
+local ESPBoxSection = ESPTab:Section({Name = "ESP Box", Side = 1})
+local ESPTextSection = ESPTab:Section({Name = "ESP Text", Side = 2})
+
+ESPBoxSection:Toggle({
+    Name = "Enable ESP",
+    Flag = "ArcESPEnabled",
+    Default = false,
+    Callback = function(v) ArcConfig.ESP.Enabled = v end
+})
+
+ESPBoxSection:Toggle({
+    Name = "2D Box",
+    Flag = "ArcESPBox",
+    Default = false,
+    Callback = function(v) ArcConfig.ESP.Box = v end
+})
+
+ESPBoxSection:Toggle({
+    Name = "Show Tracers",
+    Flag = "ArcESPTracer",
+    Default = false,
+    Callback = function(v) ArcConfig.ESP.Tracer = v end
+})
+
+ESPBoxSection:Dropdown({
+    Name = "Tracer Start Point",
+    Items = {"Mouse", "Head", "Center Screen"},
+    Default = "Mouse",
+    Flag = "ArcESPTracerStart",
+    Callback = function(v) ArcConfig.ESP.TracerStartPoint = v end
+})
+
+ESPBoxSection:Toggle({
+    Name = "Team Colors",
+    Flag = "ArcESPTeamColors",
+    Default = true,
+    Callback = function(v) ArcConfig.ESP.TeamColors = v end
+})
+
+ESPBoxSection:Slider({
+    Name = "Max Distance",
+    Range = {100, 2000},
+    Increment = 100,
+    Default = 1000,
+    Flag = "ArcESPMaxDistance",
+    Suffix = "studs",
+    Callback = function(v) ArcConfig.ESP.MaxDistance = v end
+})
+
+ESPTextSection:Toggle({
+    Name = "Show Names",
+    Flag = "ArcESPName",
+    Default = false,
+    Callback = function(v) ArcConfig.ESP.Name = v end
+})
+
+ESPTextSection:Toggle({
+    Name = "Show Health",
+    Flag = "ArcESPHealth",
+    Default = false,
+    Callback = function(v) ArcConfig.ESP.Health = v end
+})
+
+ESPTextSection:Toggle({
+    Name = "Show Distance",
+    Flag = "ArcESPDistance",
+    Default = false,
+    Callback = function(v) ArcConfig.ESP.Distance = v end
+})
+
+-- Settings Tab
+local SettingsSection = SettingsPage.Pages[3]:Section({Name = "Arc Client", Side = 1})
+
+SettingsSection:Keybind({
+    Name = "Toggle Script",
+    Flag = "ArcToggleKey",
+    Default = Enum.KeyCode.RightShift,
+    Mode = "Toggle",
+    Callback = function(k) 
+        if type(k) == "table" then
+            ArcConfig.ToggleKey = k.Key
+        end
+    end
+})
+
+-- ============= Arc Client Functionality =============
+
+-- Original Variables
+local currentGun = nil
+local rng = Random.new()
+local lastShotTime = 0
+local lastShotResult = false
+local shotCooldown = 0.15
+local currentTarget = nil
+local targetSwitchTime = 0
+local currentStickiness = 0
+local lastAutoShoot = 0
+local targetAcquiredTime = 0
+local lastAutoTarget = nil
+local lastGun = nil
+local origCastRay = nil
+local hooked = false
+local lastValidTarget = nil
+local lastValidTargetPos = nil
+local targetLostTime = 0
+local TARGET_MEMORY_TIME = 0.1
+
+-- FOV Circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Color = Color3.fromRGB(255, 255, 255)
+fovCircle.Radius = ArcConfig.FOV
+fovCircle.Transparency = 0.8
+fovCircle.Filled = false
+fovCircle.NumSides = 64
+fovCircle.Thickness = 1
+fovCircle.Visible = false
+fovCircle.Position = Camera.ViewportSize / 2
+
+Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+    fovCircle.Position = Camera.ViewportSize / 2
+end)
+
+-- Target Line
+local targetLine = Drawing.new("Line")
+targetLine.Color = Color3.fromRGB(255, 255, 255)
+targetLine.Thickness = 1
+targetLine.Transparency = 0.5
+targetLine.Visible = false
+
+-- ESP System
+local ESP = {
+    Objects = {},
+    TeamColors = {
+        [Guards] = Color3.fromRGB(0, 150, 255),
+        [Criminals] = Color3.fromRGB(255, 50, 50),
+        [Inmates] = Color3.fromRGB(255, 165, 0),
+    }
+}
+
+local function createESP(player)
+    if ESP.Objects[player] then return end
     
-    do -- Combat page
-        local WeaponSubPage = CombatPage:SubPage({Name = "Weapon", Columns = 2})
-        local AimbotSubPage = CombatPage:SubPage({Name = "Aimbot", Columns = 2}) 
+    ESP.Objects[player] = {
+        Box = Drawing.new("Square"),
+        Name = Drawing.new("Text"),
+        Health = Drawing.new("Text"),
+        Distance = Drawing.new("Text"),
+        Tracer = Drawing.new("Line"),
+        Active = false
+    }
+    
+    local obj = ESP.Objects[player]
+    
+    obj.Box.Visible = false
+    obj.Box.Thickness = 1
+    obj.Box.Transparency = 0.7
+    obj.Box.Filled = false
+    obj.Box.Color = Color3.fromRGB(255, 255, 255)
+    
+    obj.Name.Visible = false
+    obj.Name.Size = 13
+    obj.Name.Center = true
+    obj.Name.Outline = true
+    obj.Name.Font = 2
+    obj.Name.Color = Color3.fromRGB(255, 255, 255)
+    
+    obj.Health.Visible = false
+    obj.Health.Size = 11
+    obj.Health.Center = true
+    obj.Health.Outline = true
+    obj.Health.Font = 2
+    obj.Health.Color = Color3.fromRGB(0, 255, 0)
+    
+    obj.Distance.Visible = false
+    obj.Distance.Size = 11
+    obj.Distance.Center = true
+    obj.Distance.Outline = true
+    obj.Distance.Font = 2
+    obj.Distance.Color = Color3.fromRGB(255, 255, 255)
+    
+    obj.Tracer.Visible = false
+    obj.Tracer.Thickness = 1
+    obj.Tracer.Transparency = 0.7
+    obj.Tracer.Color = Color3.fromRGB(255, 255, 255)
+end
 
-        do -- Weapon subpage
-            local RangedWeaponSection = WeaponSubPage:Section({Name = "Ranged Weapons", Side = 1}) do -- Ranged weapon section
-                RangedWeaponSection:Toggle({
-                    Name = "Enabled",
-                    Flag = "RangedWeaponEnabled",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
+local function hideESP(player)
+    local obj = ESP.Objects[player]
+    if not obj then return end
+    obj.Box.Visible = false
+    obj.Name.Visible = false
+    obj.Health.Visible = false
+    obj.Distance.Visible = false
+    obj.Tracer.Visible = false
+    obj.Active = false
+end
 
-                RangedWeaponSection:Toggle({
-                    Name = "Instant hit",
-                    Flag = "RangedWeaponInstantHit",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
+local function getHealthColor(health, maxHealth)
+    local percent = health / maxHealth
+    if percent > 0.6 then
+        return Color3.fromRGB(0, 255, 0)
+    elseif percent > 0.3 then
+        return Color3.fromRGB(255, 255, 0)
+    else
+        return Color3.fromRGB(255, 0, 0)
+    end
+end
 
-                RangedWeaponSection:Toggle({
-                    Name = "Rapid fire",
-                    Flag = "RangedWeaponRapidFire",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
+local function shouldShowESP(player)
+    if player == LocalPlayer then return false end
+    if not player.Character then return false end
+    
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+    
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    
+    local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
+    if distance > ArcConfig.ESP.MaxDistance then return false end
+    
+    return true
+end
 
-                RangedWeaponSection:Toggle({
-                    Name = "Full auto",
-                    Flag = "RangedWeaponFullAuto",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                RangedWeaponSection:Slider({
-                    Name = "Reload time",
-                    Flag = "RangedWeaponReloadTime",
-                    Min = 0,
-                    Suffix = "s",
-                    Max = 5,
-                    Default = 0,
-                    Decimals = 0.01,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                RangedWeaponSection:Dropdown({
-                    Name = "Mode",
-                    Items = {"Burst", "Auto", "Single"},
-                    Flag = "RangedWeaponMode",
-                    Default = "Burst",
-                    Multi = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                local Button = RangedWeaponSection:Button()
-                Button:Add("Apply", function()
-                    print("Pressed")
-                end)
-                Button:Add("Reset", function()
-                    print("Pressed 2")
-                end)
+local function updateESP()
+    if not ArcConfig.ESP.Enabled then
+        for player, obj in pairs(ESP.Objects) do
+            if obj.Active then
+                hideESP(player)
             end
         end
-
-        do -- Aimbot subpage
-            local SilentAimSection = AimbotSubPage:Section({Name = "Silent Aim", Side = 1}) do -- Silent aim section
-                SilentAimSection:Toggle({
-                    Name = "Enabled",
-                    Flag = "SilentAimEnabled",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                local Toggle = SilentAimSection:Toggle({
-                    Name = "FoV Circle",
-                    Flag = "SilentAimFoVEnabled",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                Toggle:Colorpicker({
-                    Name = "FoV",
-                    Flag = "SilentAimFoV",
-                    Default = Library.Theme.Accent,
-                    Alpha = 0,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                Toggle:Colorpicker({
-                    Name = "FoV",
-                    Flag = "SilentAimFoVOutline",
-                    Default = Color3.fromRGB(0, 0, 0),
-                    Alpha = 0,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                SilentAimSection:Dropdown({
-                    Name = "Bone",
-                    Flag = "SilentAimBone",
-                    Default = "Head",
-                    Multi = false,
-                    Items = {"Head", "Penis", "Ass", "Thigh", "Tits"},
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                SilentAimSection:Toggle({
-                    Name = "Manipulation",
-                    Flag = "SilentAimManipulation",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                SilentAimSection:Slider({
-                    Name = "Radius",
-                    Flag = "FoVRadius",
-                    Min = 1,
-                    Suffix = "px",
-                    Max = 500,
-                    Default = 75,
-                    Decimals = 1,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                SilentAimSection:Toggle({
-                    Name = "Wall Check",
-                    Flag = "SilentAimFoVWallCheck",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                SilentAimSection:Toggle({
-                    Name = "Team Check",
-                    Flag = "SilentAimFoVTeamCheck",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
-
-                SilentAimSection:Toggle({
-                    Name = "Death Check",
-                    Flag = "SilentAimFoVDeathCheck",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
-                    end
-                })
+        return
+    end
+    
+    local viewportSize = Camera.ViewportSize
+    local cameraPos = Camera.CFrame.Position
+    
+    local tracerStartPos
+    if ArcConfig.ESP.TracerStartPoint == "Mouse" then
+        tracerStartPos = Vector2.new(Mouse.X, Mouse.Y)
+    elseif ArcConfig.ESP.TracerStartPoint == "Head" then
+        tracerStartPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 3)
+    else
+        tracerStartPos = viewportSize / 2
+    end
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if shouldShowESP(player) then
+            if not ESP.Objects[player] then
+                createESP(player)
             end
-
-            local AimbotSection = AimbotSubPage:Section({Name = "Camera", Side = 2}) do -- Aimbot section
-                AimbotSection:Toggle({
-                    Name = "Enabled",
-                    Flag = "AimbotEnabled",
-                    Default = false,
-                    Callback = function(Value)
-                        print(Value)
+            
+            local obj = ESP.Objects[player]
+            local char = player.Character
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            
+            if hrp and humanoid then
+                local head = char:FindFirstChild("Head")
+                local headPos = head and head.Position or (hrp.Position + Vector3.new(0, 2.5, 0))
+                local footPos = hrp.Position - Vector3.new(0, 3, 0)
+                
+                local headScreen, headVisible = Camera:WorldToViewportPoint(headPos)
+                local footScreen, footVisible = Camera:WorldToViewportPoint(footPos)
+                
+                if headVisible and footVisible and headScreen.Z > 0 then
+                    local boxHeight = math.abs(headScreen.Y - footScreen.Y)
+                    local boxWidth = boxHeight * 0.6
+                    local boxX = headScreen.X - boxWidth / 2
+                    local boxY = headScreen.Y
+                    
+                    local color = Color3.fromRGB(255, 255, 255)
+                    if ArcConfig.ESP.TeamColors and ESP.TeamColors[player.Team] then
+                        color = ESP.TeamColors[player.Team]
                     end
-                }):Keybind({
-                    Flag = "AimbotKeybind",
-                    Default = Enum.KeyCode.E,
-                    Mode = "Toggle",
-                    Callback = function(Value)
-                        print(Value)
+                    
+                    local distance = (cameraPos - hrp.Position).Magnitude
+                    
+                    obj.Active = true
+                    
+                    if ArcConfig.ESP.Box then
+                        obj.Box.Visible = true
+                        obj.Box.Color = color
+                        obj.Box.Position = Vector2.new(boxX, boxY)
+                        obj.Box.Size = Vector2.new(boxWidth, boxHeight)
+                    else
+                        obj.Box.Visible = false
                     end
-                })
-
-                AimbotSection:Searchbox({
-                    Name = "Searchbox",
-                    Flag = "Searchbox",
-                    Items = {"Option 1", "Option 2", "Option 3", "Option 4", "Option 5", "Option 6", "Option 7", "Option 8", "Option 9", "Option 10", "Option 11"},
-                    Multi = false,
-                    Default = "Option 1",
-                    Callback = function(Value)
-                        print(Value)
+                    
+                    if ArcConfig.ESP.Name then
+                        obj.Name.Visible = true
+                        obj.Name.Color = color
+                        obj.Name.Text = player.Name
+                        obj.Name.Position = Vector2.new(headScreen.X, boxY - 15)
+                    else
+                        obj.Name.Visible = false
                     end
-                })
+                    
+                    if ArcConfig.ESP.Health then
+                        obj.Health.Visible = true
+                        obj.Health.Color = getHealthColor(humanoid.Health, humanoid.MaxHealth)
+                        obj.Health.Text = string.format("%.0f HP", humanoid.Health)
+                        obj.Health.Position = Vector2.new(headScreen.X, boxY + boxHeight + 2)
+                    else
+                        obj.Health.Visible = false
+                    end
+                    
+                    if ArcConfig.ESP.Distance then
+                        obj.Distance.Visible = true
+                        obj.Distance.Text = string.format("%.0fm", distance)
+                        obj.Distance.Position = Vector2.new(headScreen.X, boxY + boxHeight + 15)
+                    else
+                        obj.Distance.Visible = false
+                    end
+                    
+                    if ArcConfig.ESP.Tracer then
+                        obj.Tracer.Visible = true
+                        obj.Tracer.Color = color
+                        obj.Tracer.From = tracerStartPos
+                        obj.Tracer.To = Vector2.new(footScreen.X, footScreen.Y)
+                    else
+                        obj.Tracer.Visible = false
+                    end
+                else
+                    if obj.Active then
+                        hideESP(player)
+                    end
+                end
+            else
+                if obj.Active then
+                    hideESP(player)
+                end
             end
+        else
+            if ESP.Objects[player] and ESP.Objects[player].Active then
+                hideESP(player)
+            end
+        end
+    end
+    
+    for player, obj in pairs(ESP.Objects) do
+        if not Players:FindFirstChild(player.Name) then
+            obj.Box:Remove()
+            obj.Name:Remove()
+            obj.Health:Remove()
+            obj.Distance:Remove()
+            obj.Tracer:Remove()
+            ESP.Objects[player] = nil
         end
     end
 end
 
-Library:Notification("Loaded!", "Menu took "..string.format("%.4f", os.clock() - LoadTick).." seconds to load", 5)
+-- Part Map
+local partMap = {
+    ["Torso"] = {"Torso", "UpperTorso", "LowerTorso"},
+    ["Left Arm"] = {"Left Arm", "LeftUpperArm", "LeftLowerArm", "LeftHand"},
+    ["Right Arm"] = {"Right Arm", "RightUpperArm", "RightLowerArm", "RightHand"},
+    ["Left Leg"] = {"Left Leg", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot"},
+    ["Right Leg"] = {"Right Leg", "RightUpperLeg", "RightLowerLeg", "RightFoot"}
+}
 
--- Auto-show mobile controls hint on mobile
+-- Raycast Params
+local wallParams = RaycastParams.new()
+wallParams.FilterType = Enum.RaycastFilterType.Exclude
+wallParams.IgnoreWater = true
+wallParams.RespectCanCollide = false
+wallParams.CollisionGroup = "ClientBullet"
+
+-- Utility Functions
+local function getPart(char, name)
+    if not char then return nil end
+    local p = char:FindFirstChild(name)
+    if p then return p end
+    
+    local maps = partMap[name]
+    if maps then
+        for _, n in ipairs(maps) do
+            local part = char:FindFirstChild(n)
+            if part then return part end
+        end
+    end
+    return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+end
+
+local function getTargetPart(char)
+    if not char then return nil end
+    
+    if ArcConfig.ShieldBreaker then
+        local shield = char:FindFirstChild("RiotShieldPart")
+        if shield and shield:IsA("BasePart") then
+            local hp = shield:GetAttribute("Health")
+            if hp and hp > 0 then
+                local myChar = LocalPlayer.Character
+                local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+                local theirHrp = char:FindFirstChild("HumanoidRootPart")
+                
+                if myHrp and theirHrp then
+                    local toMe = (myHrp.Position - theirHrp.Position).Unit
+                    local theirLook = theirHrp.CFrame.LookVector
+                    local dot = toMe:Dot(theirLook)
+                    
+                    if dot > ArcConfig.ShieldFrontAngle then
+                        if ArcConfig.ShieldRandomHead and rng:NextInteger(1, 100) <= ArcConfig.ShieldHeadChance then
+                            return getPart(char, "Head")
+                        end
+                        return shield
+                    end
+                end
+            end
+        end
+    end
+    
+    local partName
+    if ArcConfig.RandomParts then
+        local list = ArcConfig.PartsList
+        partName = (list and #list > 0) and list[rng:NextInteger(1, #list)] or "Head"
+    else
+        partName = ArcConfig.AimPart
+    end
+    return getPart(char, partName)
+end
+
+local function isDead(player)
+    if not player or not player.Character then return true end
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    return not humanoid or humanoid.Health <= 0
+end
+
+local function isStanding(player)
+    if not player or not player.Character then return false end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    local vel = hrp.AssemblyLinearVelocity
+    return Vector2.new(vel.X, vel.Z).Magnitude <= ArcConfig.StillThreshold
+end
+
+local function hasForceField(player)
+    if not player or not player.Character then return false end
+    return player.Character:FindFirstChildOfClass("ForceField") ~= nil
+end
+
+local function isInVehicle(player)
+    if not player or not player.Character then return false end
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return false end
+    return humanoid.SeatPart ~= nil
+end
+
+local function wallBetween(startPos, endPos, targetChar)
+    local myChar = LocalPlayer.Character
+    if not myChar then return true end
+    
+    local filter = {myChar}
+    if targetChar then table.insert(filter, targetChar) end
+    wallParams.FilterDescendantsInstances = filter
+    
+    local direction = endPos - startPos
+    local distance = direction.Magnitude
+    local unit = direction.Unit
+    
+    local currentStart = startPos
+    local remaining = distance
+    
+    for _ = 1, 10 do
+        local result = Workspace:Raycast(currentStart, unit * remaining, wallParams)
+        if not result then return false end
+        
+        local hit = result.Instance
+        if hit.Transparency < 0.8 and hit.CanCollide then return true end
+        
+        local hitDist = (result.Position - currentStart).Magnitude
+        remaining = remaining - hitDist - 0.01
+        if remaining <= 0 then return false end
+        
+        currentStart = result.Position + unit * 0.01
+    end
+    return false
+end
+
+local function quickCheck(player)
+    if not player or player == LocalPlayer or not player.Character then return false end
+    if not getTargetPart(player.Character) then return false end
+    if ArcConfig.DeathCheck and isDead(player) then return false end
+    if ArcConfig.ForcefieldCheck and hasForceField(player) then return false end
+    if ArcConfig.VehicleCheck and isInVehicle(player) then return false end
+    if ArcConfig.TeamCheck and player.Team == LocalPlayer.Team then return false end
+    if ArcConfig.CriminalsNoInmates then
+        if LocalPlayer.Team == Criminals and player.Team == Inmates then return false end
+    end
+    if ArcConfig.InmatesNoCriminals then
+        if LocalPlayer.Team == Inmates and player.Team == Criminals then return false end
+    end
+    
+    if ArcConfig.HostileCheck or ArcConfig.TrespassCheck then
+        local isTaser = currentGun and currentGun:GetAttribute("Projectile") == "Taser"
+        local bypassHostile = ArcConfig.TaserBypassHostile and isTaser
+        local bypassTrespass = ArcConfig.TaserBypassTrespass and isTaser
+        local targetChar = player.Character
+        
+        if LocalPlayer.Team == Guards and player.Team == Inmates then
+            local hostile = targetChar:GetAttribute("Hostile")
+            local trespass = targetChar:GetAttribute("Trespassing")
+            
+            if ArcConfig.HostileCheck and ArcConfig.TrespassCheck then
+                if not bypassHostile and not bypassTrespass then
+                    if not hostile and not trespass then return false end
+                end
+            elseif ArcConfig.HostileCheck and not bypassHostile then
+                if not hostile then return false end
+            elseif ArcConfig.TrespassCheck and not bypassTrespass then
+                if not trespass then return false end
+            end
+        end
+    end
+    return true
+end
+
+local function fullCheck(player)
+    if not quickCheck(player) then return false end
+    
+    if ArcConfig.WallCheck then
+        local myChar = LocalPlayer.Character
+        local myHead = myChar and myChar:FindFirstChild("Head")
+        local targetPart = getTargetPart(player.Character)
+        if myHead and targetPart then
+            if wallBetween(myHead.Position, targetPart.Position, player.Character) then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+local function rollHit()
+    local now = os.clock()
+    if now - lastShotTime > shotCooldown then
+        lastShotTime = now
+        local chance = ArcConfig.Hitchance
+        if chance >= 100 then
+            lastShotResult = true
+        elseif chance <= 0 then
+            lastShotResult = false
+        else
+            lastShotResult = rng:NextInteger(1, 100) <= chance
+        end
+    end
+    return lastShotResult
+end
+
+local function getMissPos(targetPos)
+    local spread = ArcConfig.MissSpread
+    local angle = rng:NextNumber() * math.pi * 2
+    local d = rng:NextNumber() * spread
+    local yOffset = (rng:NextNumber() - 0.5) * spread
+    return targetPos + Vector3.new(math.cos(angle) * d, yOffset, math.sin(angle) * d)
+end
+
+local function getClosest(fovRadius)
+    fovRadius = fovRadius or ArcConfig.FOV
+    local camera = Workspace.CurrentCamera
+    if not camera then return nil, nil end
+    
+    local aimPos = Camera.ViewportSize / 2
+    local now = os.clock()
+    
+    -- First check if we have a remembered target that's still valid
+    if lastValidTarget and (now - targetLostTime) < TARGET_MEMORY_TIME then
+        if fullCheck(lastValidTarget) then
+            local part = getTargetPart(lastValidTarget.Character)
+            if part then
+                local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                if onScreen and screenPos.Z > 0 then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - aimPos).Magnitude
+                    if dist < fovRadius then
+                        currentTarget = lastValidTarget
+                        targetSwitchTime = now
+                        return lastValidTarget, part.Position
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Check current target with stickiness
+    if ArcConfig.TargetStickiness and currentTarget and (now - targetSwitchTime) < currentStickiness then
+        if fullCheck(currentTarget) then
+            local part = getTargetPart(currentTarget.Character)
+            if part then
+                local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                if onScreen and screenPos.Z > 0 then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - aimPos).Magnitude
+                    if dist < fovRadius then
+                        lastValidTarget = currentTarget
+                        targetLostTime = now
+                        return currentTarget, part.Position
+                    end
+                end
+            end
+        end
+    end
+    
+    local candidates = {}
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if quickCheck(player) then
+            local part = getTargetPart(player.Character)
+            if part then
+                local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
+                if onScreen and screenPos.Z > 0 then
+                    local dist = (Vector2.new(screenPos.X, screenPos.Y) - aimPos).Magnitude
+                    if dist < fovRadius then
+                        candidates[#candidates + 1] = {player = player, dist = dist, part = part}
+                    end
+                end
+            end
+        end
+    end
+    
+    if ArcConfig.PrioritizeClosest then
+        table.sort(candidates, function(a, b) return a.dist < b.dist end)
+    else
+        for i = #candidates, 2, -1 do
+            local j = rng:NextInteger(1, i)
+            candidates[i], candidates[j] = candidates[j], candidates[i]
+        end
+    end
+    
+    for _, candidate in ipairs(candidates) do
+        if fullCheck(candidate.player) then
+            if candidate.player ~= currentTarget then
+                currentTarget = candidate.player
+                targetSwitchTime = now
+                if ArcConfig.TargetStickinessRandom then
+                    currentStickiness = rng:NextNumber(ArcConfig.TargetStickinessMin, ArcConfig.TargetStickinessMax)
+                else
+                    currentStickiness = ArcConfig.TargetStickinessDuration
+                end
+            end
+            lastValidTarget = candidate.player
+            targetLostTime = now
+            return candidate.player, candidate.part.Position
+        end
+    end
+    
+    if currentTarget then
+        currentTarget = nil
+    end
+    return nil, nil
+end
+
+local function getGun()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    for _, tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") and tool:GetAttribute("ToolType") == "Gun" then
+            return tool
+        end
+    end
+    return nil
+end
+
+local ShootEvent = ReplicatedStorage:FindFirstChild("GunRemotes") and ReplicatedStorage.GunRemotes:FindFirstChild("ShootEvent")
+
+local function autoShoot()
+    if not ArcConfig.AutoShoot or not ArcConfig.Enabled or not currentGun then return end
+    if not ShootEvent then return end
+    
+    local now = os.clock()
+    local fireRate = currentGun:GetAttribute("FireRate") or ArcConfig.AutoShootDelay
+    if now - lastAutoShoot < fireRate then return end
+    
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+    local myHead = myChar:FindFirstChild("Head")
+    if not myHead then return end
+    
+    local target, targetPos = getClosest(ArcConfig.FOV)
+    if not target or not fullCheck(target) then 
+        lastAutoTarget = nil
+        return 
+    end
+    
+    if target ~= lastAutoTarget then
+        targetAcquiredTime = now
+        lastAutoTarget = target
+    end
+    
+    if now - targetAcquiredTime < ArcConfig.AutoShootStartDelay then return end
+    
+    local targetPart = getTargetPart(target.Character)
+    if not targetPart then return end
+    
+    local ammo = currentGun:GetAttribute("Local_CurrentAmmo") or currentGun:GetAttribute("CurrentAmmo") or 0
+    if ammo <= 0 then return end
+    
+    lastAutoShoot = now
+    
+    local isTaser = currentGun:GetAttribute("Projectile") == "Taser"
+    local isShotgun = currentGun:GetAttribute("IsShotgun")
+    local shouldHit = false
+    
+    if ArcConfig.TaserAlwaysHit and isTaser then
+        shouldHit = true
+    elseif ArcConfig.IfPlayerStill and isStanding(target) then
+        shouldHit = true
+    elseif ArcConfig.HitchanceAutoOnly and isShotgun then
+        shouldHit = true
+    else
+        shouldHit = rollHit()
+    end
+    
+    local projectileCount = currentGun:GetAttribute("ProjectileCount") or 1
+    local shots = {}
+    
+    for i = 1, projectileCount do
+        local finalPos
+        if shouldHit then
+            finalPos = targetPart.Position
+        else
+            if ArcConfig.MissSpread > 0 then
+                finalPos = getMissPos(targetPart.Position)
+            else
+                return
+            end
+        end
+        shots[i] = {myHead.Position, finalPos, shouldHit and targetPart or nil}
+    end
+    
+    ShootEvent:FireServer(shots)
+    
+    local newAmmo = ammo - 1
+    currentGun:SetAttribute("Local_CurrentAmmo", newAmmo)
+    lastAutoShoot = now
+end
+
+local function noUpvals(fn)
+    return function(...) return fn(...) end
+end
+
+local function setupHook()
+    local castRayFunc = nil
+    for _, obj in ipairs(getgc(true)) do
+        if type(obj) == "function" and getfenv(obj).script and debug.getinfo(obj).name == "castRay" then
+            castRayFunc = obj
+            break
+        end
+    end
+    
+    if not castRayFunc then return false end
+    
+    origCastRay = hookfunction(castRayFunc, noUpvals(function(startPos, targetPos, ...)
+        if not ArcConfig.Enabled then return origCastRay(startPos, targetPos, ...) end
+        
+        local closest, closestPos = getClosest(ArcConfig.FOV)
+        
+        if closest and closest.Character then
+            local isTaser = currentGun and currentGun:GetAttribute("Projectile") == "Taser"
+            local isShotgun = currentGun and currentGun:GetAttribute("IsShotgun")
+            local shouldHit = false
+            
+            if ArcConfig.HitchanceAutoOnly and isShotgun then
+                return origCastRay(startPos, targetPos, ...)
+            end
+            
+            if ArcConfig.ShotgunGameHandled and isShotgun then
+                local targetPart = getTargetPart(closest.Character)
+                if targetPart then
+                    return origCastRay(startPos, targetPart.Position, ...)
+                end
+                return origCastRay(startPos, targetPos, ...)
+            end
+            
+            if ArcConfig.TaserAlwaysHit and isTaser then
+                shouldHit = true
+            elseif ArcConfig.IfPlayerStill and isStanding(closest) then
+                shouldHit = true
+            else
+                shouldHit = rollHit()
+            end
+            
+            if shouldHit then
+                local targetPart = getTargetPart(closest.Character)
+                if targetPart then
+                    if ArcConfig.ShotgunNaturalSpread and isShotgun then
+                        return origCastRay(startPos, targetPart.Position, ...)
+                    end
+                    return targetPart, targetPart.Position
+                end
+            else
+                if ArcConfig.MissSpread > 0 then
+                    local targetPart = getTargetPart(closest.Character)
+                    if targetPart then
+                        local missPos = getMissPos(targetPart.Position)
+                        return origCastRay(startPos, missPos, ...)
+                    end
+                end
+                return origCastRay(startPos, targetPos, ...)
+            end
+        end
+        
+        return origCastRay(startPos, targetPos, ...)
+    end))
+    return true
+end
+
+-- Main Loops
+RunService.Heartbeat:Connect(function()
+    currentGun = getGun()
+    if currentGun ~= lastGun then
+        lastAutoShoot = 0
+        lastGun = currentGun
+    end
+    autoShoot()
+end)
+
+RunService.RenderStepped:Connect(function()
+    if ArcConfig.Enabled and ArcConfig.ShowFOV then
+        fovCircle.Visible = true
+        fovCircle.Radius = ArcConfig.FOV
+    else
+        fovCircle.Visible = false
+    end
+    
+    if ArcConfig.ShowTargetLine and ArcConfig.Enabled then
+        local target, targetPos = getClosest()
+        
+        if target and targetPos then
+            local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(targetPos)
+            if onScreen then
+                targetLine.From = Camera.ViewportSize / 2
+                targetLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                targetLine.Visible = true
+                lastValidTargetPos = targetPos
+            elseif lastValidTargetPos then
+                local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(lastValidTargetPos)
+                if onScreen then
+                    targetLine.From = Camera.ViewportSize / 2
+                    targetLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                    targetLine.Visible = true
+                else
+                    targetLine.Visible = false
+                end
+            else
+                targetLine.Visible = false
+            end
+        elseif lastValidTargetPos then
+            local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(lastValidTargetPos)
+            if onScreen then
+                targetLine.From = Camera.ViewportSize / 2
+                targetLine.To = Vector2.new(screenPos.X, screenPos.Y)
+                targetLine.Visible = true
+            else
+                targetLine.Visible = false
+            end
+        else
+            targetLine.Visible = false
+        end
+    else
+        targetLine.Visible = false
+    end
+    
+    updateESP()
+end)
+
+-- Hook Setup
+if not setupHook() then
+    task.spawn(function()
+        while not hooked do
+            task.wait(0.5)
+            if setupHook() then
+                hooked = true
+            end
+        end
+    end)
+else
+    hooked = true
+end
+
+-- Player cleanup
+Players.PlayerRemoving:Connect(function(player)
+    if ESP.Objects[player] then
+        ESP.Objects[player].Box:Remove()
+        ESP.Objects[player].Name:Remove()
+        ESP.Objects[player].Health:Remove()
+        ESP.Objects[player].Distance:Remove()
+        ESP.Objects[player].Tracer:Remove()
+        ESP.Objects[player] = nil
+    end
+end)
+
+-- Keybinds
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == ArcConfig.ToggleKey then
+        ArcConfig.Enabled = not ArcConfig.Enabled
+        StarterGui:SetCore("SendNotification", {
+            Title = "Arc Client",
+            Text = ArcConfig.Enabled and "Enabled" or "Disabled",
+            Duration = 2
+        })
+    end
+end)
+
+-- Notifications
+Library:Notification("Arc Client", "Combat Edition Loaded - Took "..string.format("%.4f", os.clock() - LoadTick).."s", 3)
+
 if Library.IsMobile then
-    Library:Notification("Mobile Mode", "Use the buttons at bottom right to show/hide or lock the UI", 5)
+    Library:Notification("Mobile Mode", "Buttons at top left control UI", 3)
 end
 
 getgenv().Library = Library
