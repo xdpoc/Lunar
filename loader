@@ -7,14 +7,11 @@ print([[
 /_/   \_\_| \_\\____|  \____|_____|___\____|_| \_| |_|  
 
         ARC CLIENT
-    made by @mqp6 on discord stupid nigger
+    made by @mqp6 on discord
  
 ]])
 
-print("stop trying to skid little nigger cornball")
-
--- Arc Client | Universal Combat Edition
--- Made by @mqp6 on discord
+print("Arc Client | Universal Combat Edition Loading...")
 
 if Library then
     Library:Unload()
@@ -186,6 +183,7 @@ local Library do
         UnusedHolder = nil,
         Font = nil,
         KeyList = nil,
+        MobileToggle = nil,
 
         Colorpickers = { },
         
@@ -766,6 +764,64 @@ local Library do
         PaddingRight = UDimNew(0, 12),
         PaddingLeft = UDimNew(0, 12)
     })
+
+    -- Mobile UI Toggle Button (Styled like Keybind List)
+    if IsMobile then
+        Library.MobileToggle = Instances:Create("Frame", {
+            Parent = Library.Holder.Instance,
+            Name = "MobileToggle",
+            AnchorPoint = Vector2New(0, 0.5),
+            Position = UDim2New(0, 12, 0.5, -55),
+            BorderColor3 = FromRGB(12, 12, 12),
+            Size = UDim2New(0, 40, 0, 40),
+            BorderSizePixel = 2,
+            BackgroundColor3 = FromRGB(14, 17, 15),
+            ZIndex = 10
+        })  
+        Library.MobileToggle:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
+        Library.MobileToggle:MakeDraggable()
+
+        Instances:Create("UIStroke", {
+            Parent = Library.MobileToggle.Instance,
+            Name = "Stroke",
+            Color = FromRGB(42, 49, 45),
+            LineJoinMode = Enum.LineJoinMode.Miter,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        }):AddToTheme({Color = "Outline"})
+
+        Library.MobileToggleImage = Instances:Create("ImageLabel", {
+            Parent = Library.MobileToggle.Instance,
+            Name = "Icon",
+            ImageColor3 = FromRGB(202, 243, 255),
+            ScaleType = Enum.ScaleType.Fit,
+            BorderColor3 = FromRGB(0, 0, 0),
+            Image = "rbxassetid://4483345998",
+            BackgroundTransparency = 1,
+            Size = UDim2New(1, -8, 1, -8),
+            Position = UDim2New(0, 4, 0, 4),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })  
+        Library.MobileToggleImage:AddToTheme({ImageColor3 = "Accent"})
+
+        Library.MobileToggle:Connect("MouseButton1Down", function()
+            if Library.MenuVisible then
+                Library.MenuVisible = false
+                for _, window in pairs(Library.Pages) do
+                    if window.Window then
+                        window.Window:SetOpen(false)
+                    end
+                end
+            else
+                Library.MenuVisible = true
+                for _, window in pairs(Library.Pages) do
+                    if window.Window then
+                        window.Window:SetOpen(true)
+                    end
+                end
+            end
+        end)
+    end
 
     Library.Unload = function(self)
         for Index, Value in pairs(self.Connections) do 
@@ -6087,7 +6143,7 @@ local Library do
             })
 
             Items["Text"] = Instances:Create("TextLabel", {
-                Parent = Items["Label"].Instance,
+                Parent = Items["BlankElement"].Instance,
                 Name = "Text",
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(235, 235, 235),
