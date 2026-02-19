@@ -1,3 +1,14 @@
+--[[
+    scoot ui library
+    made by samet
+    
+    https://discord.gg/VhvTd5HV8d
+    ^^ join for custom commissions
+
+    example/documentation is at the bottom
+    date: 19.07.2025
+]]
+
 if Library then
     Library:Unload()
 end
@@ -12,6 +23,7 @@ local Library do
     local RunService = game:GetService("RunService")
     local CoreGui = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
+    local GuiService = game:GetService("GuiService")
 
     gethui = gethui or function()
         return CoreGui
@@ -56,7 +68,11 @@ local Library do
 
     local RectNew = Rect.new
 
-    local IsMobile = UserInputService.TouchEnabled or false
+    local IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    
+    -- Mobile scale factor
+    local MobileScale = IsMobile and 0.65 or 1
+    local MobilePositionOffset = IsMobile and UDim2New(0, 0, 0, 50) or UDim2New(0, 0, 0, 0)
 
     Library = {
         Theme =  { },
@@ -115,6 +131,14 @@ local Library do
         KeyList = nil,
 
         Colorpickers = { },
+        
+        -- Mobile properties
+        IsMobile = IsMobile,
+        MobileScale = MobileScale,
+        MobileUIEnabled = true,
+        MobileUILocked = false,
+        MobileLockButton = nil,
+        MobileToggleButton = nil,
     }
 
     Library.__index = Library
@@ -332,6 +356,21 @@ local Library do
         Instances.__index = Instances
 
         Instances.Create = function(self, Class, Properties)
+            -- Scale sizes for mobile
+            if Library.IsMobile and Properties.Size and Class ~= "ScreenGui" then
+                if typeof(Properties.Size) == "UDim2" then
+                    -- Scale offset values
+                    if Properties.Size.X.Offset > 0 then
+                        Properties.Size = UDim2New(
+                            Properties.Size.X.Scale,
+                            math.floor(Properties.Size.X.Offset * Library.MobileScale),
+                            Properties.Size.Y.Scale,
+                            math.floor(Properties.Size.Y.Offset * Library.MobileScale)
+                        )
+                    end
+                end
+            end
+
             local NewItem = {
                 Instance = InstanceNew(Class),
                 Properties = Properties,
@@ -687,6 +726,47 @@ local Library do
         PaddingLeft = UDimNew(0, 12)
     })
 
+    -- Mobile control buttons
+    if Library.IsMobile then
+        Library.MobileLockButton = Instances:Create("TextButton", {
+            Parent = Library.Holder.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(235, 235, 235),
+            BorderColor3 = FromRGB(12, 12, 12),
+            Text = "🔒 Lock UI",
+            AutoButtonColor = false,
+            Size = UDim2New(0, 80, 0, 30),
+            Position = UDim2New(1, -90, 1, -40),
+            BorderSizePixel = 2,
+            TextSize = 12,
+            BackgroundColor3 = FromRGB(30, 36, 31),
+            ZIndex = 10
+        })  
+        
+        Library.MobileLockButton:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border", TextColor3 = "Text"})
+        Library.MobileLockButton:TextBorder()
+
+        Library.MobileToggleButton = Instances:Create("TextButton", {
+            Parent = Library.Holder.Instance,
+            Name = "\0",
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(235, 235, 235),
+            BorderColor3 = FromRGB(12, 12, 12),
+            Text = "👁️ Hide",
+            AutoButtonColor = false,
+            Size = UDim2New(0, 80, 0, 30),
+            Position = UDim2New(1, -90, 1, -75),
+            BorderSizePixel = 2,
+            TextSize = 12,
+            BackgroundColor3 = FromRGB(30, 36, 31),
+            ZIndex = 10
+        })  
+        
+        Library.MobileToggleButton:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border", TextColor3 = "Text"})
+        Library.MobileToggleButton:TextBorder()
+    end
+
     Library.Unload = function(self)
         for Index, Value in self.Connections do 
             Value.Connection:Disconnect()
@@ -922,17 +1002,76 @@ local Library do
         return Start + (Finish - Start) * Time
     end
 
+    -- Mobile control functions
+    Library.ToggleMobileUI = function(self)
+        self.MobileUIEnabled = not self.MobileUIEnabled
+        
+        if self.MobileUIEnabled then
+            self.MobileToggleButton.Instance.Text = "👁️ Hide"
+            self.Holder.Instance.Enabled = true
+        else
+            self.MobileToggleButton.Instance.Text = "👁️ Show"
+            self.Holder.Instance.Enabled = false
+        end
+    end
+
+    Library.LockMobileUI = function(self)
+        self.MobileUILocked = not self.MobileUILocked
+        
+        if self.MobileUILocked then
+            self.MobileLockButton.Instance.Text = "🔓 Unlock UI"
+            -- Make UI non-interactable but still visible
+            for _, v in pairs(self.Holder.Instance:GetDescendants()) do
+                if v:IsA("TextButton") or v:IsA("TextBox") or v:IsA("ScrollingFrame") then
+                    v.Active = false
+                    v.Selectable = false
+                end
+            end
+        else
+            self.MobileLockButton.Instance.Text = "🔒 Lock UI"
+            -- Make UI interactable again
+            for _, v in pairs(self.Holder.Instance:GetDescendants()) do
+                if v:IsA("TextButton") or v:IsA("TextBox") or v:IsA("ScrollingFrame") then
+                    v.Active = true
+                    v.Selectable = true
+                end
+            end
+        end
+    end
+
+    -- Setup mobile button connections
+    if Library.IsMobile then
+        Library.MobileToggleButton:Connect("MouseButton1Click", function()
+            Library:ToggleMobileUI()
+        end)
+
+        Library.MobileLockButton:Connect("MouseButton1Click", function()
+            Library:LockMobileUI()
+        end)
+    end
+
     -- Components
     local Components = { } do
         Components.Window = function(self, Data)
             local Items = { } do
+                -- Scale window size for mobile
+                local windowSize = Data.Size
+                if Library.IsMobile then
+                    windowSize = UDim2New(
+                        Data.Size.X.Scale,
+                        Data.Size.X.Offset * Library.MobileScale,
+                        Data.Size.Y.Scale,
+                        Data.Size.Y.Offset * Library.MobileScale
+                    )
+                end
+
                 Items["Window"] = Instances:Create("Frame", {
                     Parent = Data.Parent.Instance,
                     Name = "\0",
                     AnchorPoint = Data.AnchorPoint,
-                    Position = Data.Position,
+                    Position = Data.Position + MobilePositionOffset,
                     BorderColor3 = FromRGB(12, 12, 12),
-                    Size = Data.Size,
+                    Size = windowSize,
                     BorderSizePixel = 2,
                     BackgroundColor3 = FromRGB(14, 17, 15)
                 })  Items["Window"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
@@ -965,7 +1104,7 @@ local Library do
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.XY,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Label"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1000,7 +1139,7 @@ local Library do
                     BackgroundTransparency = 0.6000000238418579,
                     Size = UDim2New(1, 0, 0, 25),
                     BorderSizePixel = 2,
-                    TextSize = 14,
+                    TextSize = Library.IsMobile and 12 or 14,
                     BackgroundColor3 = FromRGB(25, 30, 26)
                 })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Border"})
 
@@ -1036,7 +1175,7 @@ local Library do
                     Position = UDim2New(0, 8, 0.5, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1258,7 +1397,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 20),
                     BorderSizePixel = 2,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 14,
+                    TextSize = Library.IsMobile and 12 or 14,
                     BackgroundColor3 = FromRGB(25, 30, 26)
                 })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Page Background", BorderColor3 = "Border"})
 
@@ -1284,7 +1423,7 @@ local Library do
                     Position = UDim2New(0.5, -5, 0.5, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1544,7 +1683,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1687,7 +1826,7 @@ local Library do
                         AutoButtonColor = false,
                         Size = UDim2New(1, 0, 0, 20),
                         BorderSizePixel = 2,
-                        TextSize = 14,
+                        TextSize = Library.IsMobile and 12 or 14,
                         BackgroundColor3 = FromRGB(30, 36, 31)
                     })  SubItems["NewButton"]:AddToTheme({BackgroundColor3 = "Element", BorderColor3 = "Border"})
 
@@ -1718,7 +1857,7 @@ local Library do
                         BackgroundTransparency = 1,
                         Size = UDim2New(1, 0, 1, 0),
                         BorderSizePixel = 0,
-                        TextSize = 9,
+                        TextSize = Library.IsMobile and 12 or 9,
                         BackgroundColor3 = FromRGB(255, 255, 255)
                     })  SubItems["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1804,7 +1943,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 15),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1890,7 +2029,7 @@ local Library do
                     Position = UDim2New(1, 0, 0, 0),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Value"]:AddToTheme({TextColor3 = "Text"})
 
@@ -1917,19 +2056,6 @@ local Library do
                     Library:SafeCall(Data.Callback, Slider.Value)
                 end
             end
-
-            --[[
-            local PageSearchData = Library.SearchItems[Data.Page]
-
-            if PageSearchData then
-                local SearchData = {
-                    Element = Items["Slider"],
-                    Name = Data.Name,
-                }
-
-                TableInsert(PageSearchData, SearchData)
-            end
-            --]]
 
             local InputChanged
 
@@ -2017,7 +2143,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2088,7 +2214,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 15),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2137,7 +2263,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Position = UDim2New(0, 8, 0.5, 0),
                     BorderSizePixel = 0,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Value"]:AddToTheme({TextColor3 = "Text"})
 
@@ -2342,7 +2468,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Size = UDim2New(1, 0, 0, 15),
                     ZIndex = 5,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  OptionButton:AddToTheme({TextColor3 = "Text"})
 
@@ -2503,7 +2629,7 @@ local Library do
                     AutoButtonColor = false,
                     Size = UDim2New(1, 0, 1, 0),
                     BorderSizePixel = 0,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(20, 24, 21)
                 })  Items["Inactive"]:AddToTheme({BackgroundColor3 = "Inline"})
 
@@ -2567,7 +2693,7 @@ local Library do
                 Position = UDim2New(0, 8, 0, 8),
                 Size = UDim2New(1, -41, 1, -41),
                 BorderSizePixel = 2,
-                TextSize = 14,
+                TextSize = Library.IsMobile and 12 or 14,
                 BackgroundColor3 = FromRGB(157, 175, 255)
             })  Items["Palette"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -2691,7 +2817,7 @@ local Library do
                 Position = UDim2New(0, 8, 1, -8),
                 Size = UDim2New(1, -41, 0, 15),
                 BorderSizePixel = 2,
-                TextSize = 14,
+                TextSize = Library.IsMobile and 12 or 14,
                 BackgroundColor3 = FromRGB(157, 175, 255)
             })  Items["Alpha"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -2772,7 +2898,7 @@ local Library do
                     Position = UDim2New(0, -123, 0, 0),
                     Size = UDim2New(0, 15, 0, 15),
                     BorderSizePixel = 2,
-                    TextSize = 14,
+                    TextSize = Library.IsMobile and 12 or 14,
                     BackgroundColor3 = FromRGB(157, 175, 255)
                 })  Items["ColorpickerButton"]:AddToTheme({BorderColor3 = "Border"})
 
@@ -2906,7 +3032,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 8),
                     Size = UDim2New(1, -46, 1, -46),
                     BorderSizePixel = 2,
-                    TextSize = 14,
+                    TextSize = Library.IsMobile and 12 or 14,
                     BackgroundColor3 = FromRGB(157, 175, 255)
                 })  Items["Palette"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -3030,7 +3156,7 @@ local Library do
                     Position = UDim2New(0, 8, 1, -8),
                     Size = UDim2New(1, -46, 0, 20),
                     BorderSizePixel = 2,
-                    TextSize = 14,
+                    TextSize = Library.IsMobile and 12 or 14,
                     BackgroundColor3 = FromRGB(157, 175, 255)
                 })  Items["Alpha"]:AddToTheme({BorderColor3 = "Outline"})
 
@@ -3279,7 +3405,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     RichText = true,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
@@ -3296,7 +3422,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     RichText = true,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
@@ -3313,7 +3439,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     BorderSizePixel = 0,
                     RichText = true,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })
 
@@ -3724,7 +3850,7 @@ local Library do
                     BorderSizePixel = 0,
                     BorderColor3 = FromRGB(0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["KeyButton"]:AddToTheme({TextColor3 = "Text"})
                 
@@ -3751,7 +3877,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 8),
                     Size = UDim2New(1, -16, 0, 20),
                     BorderSizePixel = 0,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(202, 243, 255)
                 })  Items["Toggle"]:AddToTheme({BackgroundColor3 = "Accent", TextColor3 = "Text"})
 
@@ -3777,7 +3903,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 38),
                     Size = UDim2New(1, -16, 0, 20),
                     BorderSizePixel = 0,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(202, 243, 255)
                 })  Items["Hold"]:AddToTheme({BackgroundColor3 = "Accent", TextColor3 = "Text"})
 
@@ -3795,7 +3921,7 @@ local Library do
                     Position = UDim2New(0, 8, 0, 68),
                     Size = UDim2New(1, -16, 0, 20),
                     BorderSizePixel = 0,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(202, 243, 255)
                 })  Items["Always"]:AddToTheme({BackgroundColor3 = "Accent", TextColor3 = "Text"})  
 
@@ -4145,7 +4271,7 @@ local Library do
                     Size = UDim2New(0, 0, 0, 15),
                     BorderSizePixel = 0,
                     AutomaticSize = Enum.AutomaticSize.X,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4185,7 +4311,7 @@ local Library do
                     FontFace = Library.Font,
                     PlaceholderColor3 = FromRGB(185, 185, 185),
                     PlaceholderText = Data.Placeholder,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     Size = UDim2New(1, 0, 1, 0),
                     ClipsDescendants = true,
                     BorderColor3 = FromRGB(0, 0, 0),
@@ -4323,7 +4449,7 @@ local Library do
                     PlaceholderColor3 = FromRGB(185, 185, 185),
                     AutomaticSize = Enum.AutomaticSize.X,
                     PlaceholderText = "search..",
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  Items["Input"]:AddToTheme({TextColor3 = "Text", PlaceholderColor3 = "Placeholder Text"})
 
@@ -4469,7 +4595,7 @@ local Library do
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Size = UDim2New(1, 0, 0, 20),
                     ZIndex = 1,
-                    TextSize = 9,
+                    TextSize = Library.IsMobile and 12 or 9,
                     BackgroundColor3 = FromRGB(255, 255, 255)
                 })  OptionButton:AddToTheme({TextColor3 = "Text"})
 
@@ -4621,7 +4747,7 @@ local Library do
                 Parent = Library.Holder.Instance,
                 Name = "\0",
                 AnchorPoint = Vector2New(0.5, 1),
-                Position = UDim2New(0.5, 0, 1, -12),
+                Position = UDim2New(0.5, 0, 1, -12) + MobilePositionOffset,
                 BorderColor3 = FromRGB(12, 12, 12),
                 BorderSizePixel = 2,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -4659,7 +4785,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.XY,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4692,7 +4818,7 @@ local Library do
                 Parent = Library.Holder.Instance,
                 Name = "\0",
                 AnchorPoint = Vector2New(0, 0.5),
-                Position = UDim2New(0, 12, 0.5, 55),
+                Position = UDim2New(0, 12, 0.5, 55) + MobilePositionOffset,
                 BorderColor3 = FromRGB(12, 12, 12),
                 Size = UDim2New(0, 116, 0, 32),
                 BorderSizePixel = 2,
@@ -4721,7 +4847,7 @@ local Library do
                 Position = UDim2New(0, 0, 0, -4),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4779,7 +4905,7 @@ local Library do
                 AutomaticSize = Enum.AutomaticSize.X,
                 TextTransparency = 1,
                 Visible = false,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
@@ -4850,7 +4976,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.XY,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4869,7 +4995,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderColor3 = FromRGB(0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.XY,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Description"]:AddToTheme({TextColor3 = "Text"})
 
@@ -4942,7 +5068,7 @@ local Library do
             Items["InventoryViewer"] = Instances:Create("Frame", {
                 Parent = Library.Holder.Instance,
                 Name = "\0",
-                Position = UDim2New(0.007766990456730127, 0, 0.11442785710096359, 0),
+                Position = UDim2New(0.007766990456730127, 0, 0.11442785710096359, 0) + MobilePositionOffset,
                 BorderColor3 = FromRGB(12, 12, 12),
                 Size = UDim2New(0, 325, 0, 277),
                 BorderSizePixel = 2,
@@ -4969,7 +5095,7 @@ local Library do
                 Position = UDim2New(0, 8, 0, 4),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
@@ -5057,7 +5183,7 @@ local Library do
                 Position = UDim2New(0, 75, 1, -55),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["PlayerHealth"]:AddToTheme({TextColor3 = "Text"})
 
@@ -5074,7 +5200,7 @@ local Library do
                 Position = UDim2New(0, 75, 1, -35),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["PlayerDistance"]:AddToTheme({TextColor3 = "Text"})
         end
@@ -5162,6 +5288,16 @@ local Library do
             IsOpen = false,
         }
 
+        -- Scale window size for mobile
+        if Library.IsMobile then
+            Window.Size = UDim2New(
+                Data.Size.X.Scale,
+                Data.Size.X.Offset * Library.MobileScale,
+                Data.Size.Y.Scale,
+                Data.Size.Y.Offset * Library.MobileScale
+            )
+        end
+
         local Items = Components:Window({
             Parent = Library.Holder,
             Draggable = true,
@@ -5243,7 +5379,7 @@ local Library do
                 PlaceholderColor3 = FromRGB(185, 185, 185),
                 AutomaticSize = Enum.AutomaticSize.X,
                 PlaceholderText = "..",
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Input"]:AddToTheme({TextColor3 = "Text", PlaceholderColor3 = "Placeholder Text"})
 
@@ -5601,7 +5737,7 @@ local Library do
                 Position = UDim2New(0, 6, 0, 5),
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -6016,7 +6152,7 @@ local Library do
                 TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 9,
+                TextSize = Library.IsMobile and 12 or 9,
                 BackgroundColor3 = FromRGB(255, 255, 255)
             })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
@@ -6233,10 +6369,6 @@ do
                     end
                 })
 
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
-
                 RangedWeaponSection:Toggle({
                     Name = "Instant hit",
                     Flag = "RangedWeaponInstantHit",
@@ -6245,10 +6377,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
 
                 RangedWeaponSection:Toggle({
                     Name = "Rapid fire",
@@ -6259,10 +6387,6 @@ do
                     end
                 })
 
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
-
                 RangedWeaponSection:Toggle({
                     Name = "Full auto",
                     Flag = "RangedWeaponFullAuto",
@@ -6271,10 +6395,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
 
                 RangedWeaponSection:Slider({
                     Name = "Reload time",
@@ -6289,10 +6409,6 @@ do
                     end
                 })
 
-                --Slider:SetVisibility(<bool>) -> nil
-                --Slider:Set(<number>) -> nil
-                --Slider:Get(<void>) -> Slider.Value
-
                 RangedWeaponSection:Dropdown({
                     Name = "Mode",
                     Items = {"Burst", "Auto", "Single"},
@@ -6304,13 +6420,6 @@ do
                     end
                 })
 
-                --Dropdown:SetVisibility(<bool>) -> nil
-                --Dropdown:Set(<string>) -> nil
-                --Dropdown:Get(<void>) -> Dropdown.Value
-                --Dropdown:Add(<string>) -> OptionData
-                --Dropdown:Remove(<string>) -> nil
-                --Dropdown:Refresh(<table>, <boolean>) -> nil   
-
                 local Button = RangedWeaponSection:Button()
                 Button:Add("Apply", function()
                     print("Pressed")
@@ -6318,8 +6427,6 @@ do
                 Button:Add("Reset", function()
                     print("Pressed 2")
                 end)
-
-                --Button:Add(<string>, <function>)
             end
         end
 
@@ -6334,10 +6441,6 @@ do
                     end
                 })
 
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
-
                 local Toggle = SilentAimSection:Toggle({
                     Name = "FoV Circle",
                     Flag = "SilentAimFoVEnabled",
@@ -6346,10 +6449,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
 
                 Toggle:Colorpicker({
                     Name = "FoV",
@@ -6361,15 +6460,6 @@ do
                     end
                 })
 
-                --Colorpicker:SetVisibility(<bool>) -> nil
-                --Colorpicker:Set(<Color3>) -> nil
-                --Colorpicker:Get(<void>) -> Color3
-                --Colorpicker:SlidePalette(<InputObject>) -> nil
-                --Colorpicker:SlideHue(<InputObject>) -> nil
-                --Colorpicker:SlideAlpha(<InputObject>) -> nil
-                --Colorpicker:Update(<boolean>, <boolean>) -> nil
-                --Colorpicker:Set(<Color3>, <number>) -> nil
-
                 Toggle:Colorpicker({
                     Name = "FoV",
                     Flag = "SilentAimFoVOutline",
@@ -6379,15 +6469,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Colorpicker:SetVisibility(<bool>) -> nil
-                --Colorpicker:Set(<Color3>) -> nil
-                --Colorpicker:Get(<void>) -> Color3
-                --Colorpicker:SlidePalette(<InputObject>) -> nil
-                --Colorpicker:SlideHue(<InputObject>) -> nil
-                --Colorpicker:SlideAlpha(<InputObject>) -> nil
-                --Colorpicker:Update(<boolean>, <boolean>) -> nil
-                --Colorpicker:Set(<Color3>, <number>) -> nil
 
                 SilentAimSection:Dropdown({
                     Name = "Bone",
@@ -6400,13 +6481,6 @@ do
                     end
                 })
 
-                --Dropdown:SetVisibility(<bool>) -> nil
-                --Dropdown:Set(<string>) -> nil
-                --Dropdown:Get(<void>) -> Dropdown.Value
-                --Dropdown:Add(<string>) -> OptionData
-                --Dropdown:Remove(<string>) -> nil
-                --Dropdown:Refresh(<table>, <boolean>) -> nil   
-
                 SilentAimSection:Toggle({
                     Name = "Manipulation",
                     Flag = "SilentAimManipulation",
@@ -6415,10 +6489,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
 
                 SilentAimSection:Slider({
                     Name = "Radius",
@@ -6433,10 +6503,6 @@ do
                     end
                 })
 
-                --Slider:SetVisibility(<bool>) -> nil
-                --Slider:Set(<number>) -> nil
-                --Slider:Get(<void>) -> Slider.Value
-
                 SilentAimSection:Toggle({
                     Name = "Wall Check",
                     Flag = "SilentAimFoVWallCheck",
@@ -6445,10 +6511,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
 
                 SilentAimSection:Toggle({
                     Name = "Team Check",
@@ -6459,10 +6521,6 @@ do
                     end
                 })
 
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
-
                 SilentAimSection:Toggle({
                     Name = "Death Check",
                     Flag = "SilentAimFoVDeathCheck",
@@ -6471,10 +6529,6 @@ do
                         print(Value)
                     end
                 })
-
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
             end
 
             local AimbotSection = AimbotSubPage:Section({Name = "Camera", Side = 2}) do -- Aimbot section
@@ -6494,15 +6548,6 @@ do
                     end
                 })
 
-                --Toggle:SetVisibility(<bool>) -> nil
-                --Toggle:Set(<bool>) -> nil
-                --Toggle:Get(<void>) -> Toggle.Value
-
-                --Keybind:Get(<void>) -> Keybind.Key, Keybind.Mode, Keybind.Toggled
-                --Keybind:Set(<EnumItem>/<table>/<string>) -> nil
-                --Keybind:SetMode(<string>) -> nil
-                --Keybind:Press(<void>) -> nil
-
                 AimbotSection:Searchbox({
                     Name = "Searchbox",
                     Flag = "Searchbox",
@@ -6513,19 +6558,17 @@ do
                         print(Value)
                     end
                 })
-
-                --Searchbox:SetVisibility(<bool>) -> nil
-                --Searchbox:Set(<string>) -> nil
-                --Searchbox:Get(<void>) -> Searchbox.Value
-                --Searchbox:Add(<string>) -> OptionData
-                --Searchbox:Remove(<string>) -> nil
-                --Searchbox:Refresh(<table>, <boolean>) -> nil   
             end
         end
     end
 end
 
 Library:Notification("Loaded!", "Menu took "..string.format("%.4f", os.clock() - LoadTick).." seconds to load", 5)
+
+-- Auto-show mobile controls hint on mobile
+if Library.IsMobile then
+    Library:Notification("Mobile Mode", "Use the buttons at bottom right to show/hide or lock the UI", 5)
+end
 
 getgenv().Library = Library
 return Library
