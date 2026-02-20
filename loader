@@ -14,10 +14,7 @@ print("haha u cant skid")
 
 --[[
     Arc Client UI Library
-    Made for Arc Client Universal Combat Edition
-    
-    Original UI by samet, modified by @mqp6
-    Combat features by Arc Client Team
+    Made for Prison Life
 ]]
 
 if Library then
@@ -34,9 +31,9 @@ local Library do
     local RunService = game:GetService("RunService")
     local CoreGui = cloneref and cloneref(game:GetService("CoreGui")) or game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
+    local VirtualUser = game:GetService("VirtualUser")
     local StarterGui = game:GetService("StarterGui")
     local Teams = game:GetService("Teams")
-    local Debris = game:GetService("Debris")
 
     gethui = gethui or function()
         return CoreGui
@@ -4659,7 +4656,6 @@ local Library do
             })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
 
             local DraggableControl = Items["Watermark"]:MakeDraggable(Library.LockedElements.Watermark)
-            local ResizeableControl = Items["Watermark"]:MakeResizeable(Vector2New(100, 30), Vector2New(500, 200), Library.LockedElements.Watermark)
 
             Instances:Create("UIStroke", {
                 Parent = Items["Watermark"].Instance,
@@ -4708,7 +4704,6 @@ local Library do
 
             function Watermark:SetLocked(Locked)
                 DraggableControl:SetDraggable(not Locked)
-                ResizeableControl:SetResizeable(not Locked)
             end
         end
 
@@ -4740,7 +4735,6 @@ local Library do
             })  Items["KeybindList"]:AddToTheme({BackgroundColor3 = "Background", BorderColor3 = "Border"})
 
             local DraggableControl = Items["KeybindList"]:MakeDraggable(Library.LockedElements.KeybindList)
-            local ResizeableControl = Items["KeybindList"]:MakeResizeable(Vector2New(116, 32), Vector2New(400, 300), Library.LockedElements.KeybindList)
 
             Instances:Create("UIStroke", {
                 Parent = Items["KeybindList"].Instance,
@@ -4807,7 +4801,6 @@ local Library do
 
             function KeybindList:SetLocked(Locked)
                 DraggableControl:SetDraggable(not Locked)
-                ResizeableControl:SetResizeable(not Locked)
             end
         end
 
@@ -6176,8 +6169,8 @@ local Library do
                     })
 
                     SettingsSection:Toggle({
-                        Name = "Keybind list",
-                        Flag = "Keybind list",
+                        Name = "Keybind List",
+                        Flag = "KeybindList",
                         Default = true,
                         Callback = function(Value)
                             KeybindList:SetVisibility(Value)
@@ -6185,21 +6178,13 @@ local Library do
                     })
 
                     SettingsSection:Toggle({
-                        Name = "Lock Watermark",
-                        Flag = "LockWatermark",
+                        Name = "Lock UI Elements",
+                        Flag = "LockUI",
                         Default = false,
                         Callback = function(Value)
                             Library.LockedElements.Watermark = Value
-                            Watermark:SetLocked(Value)
-                        end
-                    })
-
-                    SettingsSection:Toggle({
-                        Name = "Lock Keybind List",
-                        Flag = "LockKeybindList",
-                        Default = false,
-                        Callback = function(Value)
                             Library.LockedElements.KeybindList = Value
+                            Watermark:SetLocked(Value)
                             KeybindList:SetLocked(Value)
                         end
                     })
@@ -6252,13 +6237,13 @@ local Library do
                         Library:Unload()
                     end)
 
-                    SettingsSection:Label("UI Keybind"):Keybind({
+                    SettingsSection:Label("Menu Keybind"):Keybind({
                         Name = "Menu keybind",
-                        Flag = "UIKeybind",
+                        Flag = "MenuKeybind",
                         Default = Library.MenuKeybind,
                         Mode = "Toggle",
                         Callback = function()
-                            Library.MenuKeybind = Library.Flags["UIKeybind"].Key
+                            Library.MenuKeybind = Library.Flags["MenuKeybind"].Key
                         end
                     })
                 end
@@ -6273,18 +6258,12 @@ end
 local GameID = game.PlaceId
 local DetectedGame = "Unknown"
 
-local GAME_IDS = {
-    PrisonLife = 155615604,
-    Flick = 136801880565837
-}
-
-if GameID == GAME_IDS.PrisonLife then
+-- Prison Life only
+if GameID == 155615604 then
     DetectedGame = "Prison Life"
-elseif GameID == GAME_IDS.Flick then
-    DetectedGame = "Flick"
 else
-    -- Kick the user if game is not supported
-    game:GetService("Players").LocalPlayer:Kick("Arc Client - Unsupported Game\n\nGame ID: " .. GameID .. "\nSupported Games:\n• Prison Life (155615604)\n• Flick (136801880565837)")
+    -- Kick if not Prison Life
+    game:GetService("Players").LocalPlayer:Kick("Arc Client - Prison Life Only\n\nGame ID: " .. GameID)
     return
 end
 
@@ -6297,22 +6276,15 @@ local Window = Library:Window({
 local Watermark = Library:Watermark("Arc Client | " .. DetectedGame)
 local KeybindList = Library:KeybindList()
 
--- Random number generator for features
-local rng = Random.new()
-
 -- Services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 local lp = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
-local Mouse = lp:GetMouse()
-local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
 local Teams = game:GetService("Teams")
-local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Wait for character
 local function waitForCharacter()
@@ -6323,1691 +6295,992 @@ local function waitForCharacter()
 end
 waitForCharacter()
 
--- ============= FLICK MODULE =============
-if DetectedGame == "Flick" then
-    local FlickConfig = {
-        SilentAim = false,
-        HitChance = 100,
-        ShowFOV = false,
-        FOV = 150,
-        FOVColor = Color3.fromRGB(255, 255, 255),
-        ShowESP = false,
-        ESP = {
-            Box = false,
-            BoxColor = Color3.fromRGB(255, 255, 255),
-            Name = false,
-            NameColor = Color3.fromRGB(255, 255, 255),
-            Health = false,
-            Distance = false,
-            DistanceColor = Color3.fromRGB(255, 255, 255),
-            Tracer = false,
-            TracerColor = Color3.fromRGB(255, 255, 255),
-            TeamColors = true,
-            EnemyColor = Color3.fromRGB(255, 255, 255),
-            TeamColor = Color3.fromRGB(255, 255, 255),
-            MaxDistance = 1000,
-            TracerStartPoint = "Center Screen",
-        }
-    }
+-- ============= PRISON LIFE FEATURES (from your script) =============
+local cloneref = cloneref or function(obj) return obj end
+local playersService = cloneref(Players)
+local teamService = cloneref(Teams)
+local workspaceService = cloneref(Workspace)
+local replicatedStorageService = cloneref(ReplicatedStorage)
+local runService = cloneref(RunService)
+local inputService = cloneref(UserInputService)
+local coreGui = cloneref(game:GetService('CoreGui'))
+local guiService = cloneref(game:GetService('GuiService'))
+local vimService = cloneref(game:GetService('VirtualInputManager'))
+local playerGui = cloneref(lp:WaitForChild("PlayerGui"))
 
-    -- Load BulletHandler
-    local BulletHandler = require(ReplicatedStorage:WaitForChild("ModuleScripts"):WaitForChild("GunModules"):WaitForChild("BulletHandler"))
+local remotes = replicatedStorageService:WaitForChild("Remotes")
+local gunRemotes = replicatedStorageService:WaitForChild("GunRemotes")
 
-    -- ESP System
-    local FlickESP = {
-        Objects = {},
-    }
+local ShootEvent = gunRemotes:WaitForChild("ShootEvent")
 
-    local function createFlickESP(player)
-        if FlickESP.Objects[player] then return end
-        
-        FlickESP.Objects[player] = {
-            Box = Drawing.new("Square"),
-            Name = Drawing.new("Text"),
-            Health = Drawing.new("Text"),
-            Distance = Drawing.new("Text"),
-            Tracer = Drawing.new("Line"),
-            Active = false
-        }
-        
-        local obj = FlickESP.Objects[player]
-        
-        obj.Box.Visible = false
-        obj.Box.Thickness = 1
-        obj.Box.Transparency = 0.7
-        obj.Box.Filled = false
-        obj.Box.Color = FlickConfig.ESP.BoxColor
-        
-        obj.Name.Visible = false
-        obj.Name.Size = 13
-        obj.Name.Center = true
-        obj.Name.Outline = true
-        obj.Name.Font = 2
-        obj.Name.Color = FlickConfig.ESP.NameColor
-        
-        obj.Health.Visible = false
-        obj.Health.Size = 11
-        obj.Health.Center = true
-        obj.Health.Outline = true
-        obj.Health.Font = 2
-        obj.Health.Color = Color3.fromRGB(255, 255, 255)
-        
-        obj.Distance.Visible = false
-        obj.Distance.Size = 11
-        obj.Distance.Center = true
-        obj.Distance.Outline = true
-        obj.Distance.Font = 2
-        obj.Distance.Color = FlickConfig.ESP.DistanceColor
-        
-        obj.Tracer.Visible = false
-        obj.Tracer.Thickness = 1
-        obj.Tracer.Transparency = 0.7
-        obj.Tracer.Color = FlickConfig.ESP.TracerColor
-    end
+-- Desync table
+local t = {
+    d = {l = CFrame.new(), s = CFrame.new()}, -- desync
+    bt = {m = false, q = false, p = Vector3.new()}, -- bullet manip
+    sa = {hooks = {}, toggle = nil}, -- silent aim
+    hn = {e = false} -- hit notifications
+}
 
-    local function hideFlickESP(player)
-        local obj = FlickESP.Objects[player]
-        if not obj then return end
-        obj.Box.Visible = false
-        obj.Name.Visible = false
-        obj.Health.Visible = false
-        obj.Distance.Visible = false
-        obj.Tracer.Visible = false
-        obj.Active = false
-    end
-
-    local function shouldShowFlickESP(player)
-        if player == lp then return false end
-        if not player.Character then return false end
-        
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return false end
-        
-        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        
-        local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-        if distance > FlickConfig.ESP.MaxDistance then return false end
-        
-        return true
-    end
-
-    local function updateFlickESP()
-        if not FlickConfig.ShowESP then
-            for player, obj in pairs(FlickESP.Objects) do
-                if obj.Active then
-                    hideFlickESP(player)
-                end
-            end
-            return
-        end
-        
-        local viewportSize = Camera.ViewportSize
-        local cameraPos = Camera.CFrame.Position
-        
-        local tracerStartPos
-        if FlickConfig.ESP.TracerStartPoint == "Mouse" then
-            tracerStartPos = Vector2.new(Mouse.X, Mouse.Y)
-        elseif FlickConfig.ESP.TracerStartPoint == "Head" then
-            tracerStartPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 3)
-        else
-            tracerStartPos = viewportSize / 2
-        end
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            if shouldShowFlickESP(player) then
-                if not FlickESP.Objects[player] then
-                    createFlickESP(player)
-                end
-                
-                local obj = FlickESP.Objects[player]
-                local char = player.Character
-                local humanoid = char:FindFirstChildOfClass("Humanoid")
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                
-                if hrp and humanoid then
-                    local head = char:FindFirstChild("Head")
-                    local headPos = head and head.Position or (hrp.Position + Vector3.new(0, 2.5, 0))
-                    local footPos = hrp.Position - Vector3.new(0, 3, 0)
-                    
-                    local headScreen, headVisible = Camera:WorldToViewportPoint(headPos)
-                    local footScreen, footVisible = Camera:WorldToViewportPoint(footPos)
-                    
-                    if headVisible and footVisible and headScreen.Z > 0 then
-                        local boxHeight = math.abs(headScreen.Y - footScreen.Y)
-                        local boxWidth = boxHeight * 0.6
-                        local boxX = headScreen.X - boxWidth / 2
-                        local boxY = headScreen.Y
-                        
-                        local boxColor = FlickConfig.ESP.BoxColor
-                        local nameColor = FlickConfig.ESP.NameColor
-                        local tracerColor = FlickConfig.ESP.TracerColor
-                        local distanceColor = FlickConfig.ESP.DistanceColor
-                        
-                        if FlickConfig.ESP.TeamColors and player.Team then
-                            if player.Team == lp.Team then
-                                boxColor = FlickConfig.ESP.TeamColor
-                                nameColor = FlickConfig.ESP.TeamColor
-                                tracerColor = FlickConfig.ESP.TeamColor
-                                distanceColor = FlickConfig.ESP.TeamColor
-                            else
-                                boxColor = FlickConfig.ESP.EnemyColor
-                                nameColor = FlickConfig.ESP.EnemyColor
-                                tracerColor = FlickConfig.ESP.EnemyColor
-                                distanceColor = FlickConfig.ESP.EnemyColor
-                            end
-                        end
-                        
-                        local distance = (cameraPos - hrp.Position).Magnitude
-                        
-                        obj.Active = true
-                        
-                        if FlickConfig.ESP.Box then
-                            obj.Box.Visible = true
-                            obj.Box.Color = boxColor
-                            obj.Box.Position = Vector2.new(boxX, boxY)
-                            obj.Box.Size = Vector2.new(boxWidth, boxHeight)
-                        else
-                            obj.Box.Visible = false
-                        end
-                        
-                        if FlickConfig.ESP.Name then
-                            obj.Name.Visible = true
-                            obj.Name.Color = nameColor
-                            obj.Name.Text = player.Name
-                            obj.Name.Position = Vector2.new(headScreen.X, boxY - 15)
-                        else
-                            obj.Name.Visible = false
-                        end
-                        
-                        if FlickConfig.ESP.Health then
-                            obj.Health.Visible = true
-                            obj.Health.Text = string.format("%.0f HP", humanoid.Health)
-                            obj.Health.Position = Vector2.new(headScreen.X, boxY + boxHeight + 2)
-                        else
-                            obj.Health.Visible = false
-                        end
-                        
-                        if FlickConfig.ESP.Distance then
-                            obj.Distance.Visible = true
-                            obj.Distance.Color = distanceColor
-                            obj.Distance.Text = string.format("%.0fm", distance)
-                            obj.Distance.Position = Vector2.new(headScreen.X, boxY + boxHeight + 15)
-                        else
-                            obj.Distance.Visible = false
-                        end
-                        
-                        if FlickConfig.ESP.Tracer then
-                            obj.Tracer.Visible = true
-                            obj.Tracer.Color = tracerColor
-                            obj.Tracer.From = tracerStartPos
-                            obj.Tracer.To = Vector2.new(footScreen.X, footScreen.Y)
-                        else
-                            obj.Tracer.Visible = false
-                        end
-                    else
-                        if obj.Active then
-                            hideFlickESP(player)
-                        end
-                    end
-                else
-                    if obj.Active then
-                        hideFlickESP(player)
-                    end
-                end
-            else
-                if FlickESP.Objects[player] and FlickESP.Objects[player].Active then
-                    hideFlickESP(player)
-                end
-            end
-        end
-        
-        for player, obj in pairs(FlickESP.Objects) do
-            if not Players:FindFirstChild(player.Name) then
-                obj.Box:Remove()
-                obj.Name:Remove()
-                obj.Health:Remove()
-                obj.Distance:Remove()
-                obj.Tracer:Remove()
-                FlickESP.Objects[player] = nil
-            end
+-- Desync setup
+RunService.Heartbeat:Connect(function()
+    if lp.Character and t.d.s ~= CFrame.new() then
+        local character = lp.Character
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root then
+            t.d.l = root.CFrame
+            root.CFrame = t.d.s
+            RunService.RenderStepped:Wait()
+            root.CFrame = t.d.l
         end
     end
+end)
 
-    local function shouldFlickHit()
-        if FlickConfig.HitChance >= 100 then
-            return true
-        elseif FlickConfig.HitChance <= 0 then
-            return false
-        else
-            return rng:NextInteger(1, 100) <= FlickConfig.HitChance
+-- Visual bullet manip
+Camera.ChildAdded:Connect(function(child)
+    if typeof(child.Transparency) == "number" then
+        child.Transparency = 1
+    end
+    if child.Name ~= "RayPart" or not child:IsA("BasePart") or not t.bt.m then
+        if typeof(child.Transparency) == "number" then
+            child.Transparency = 0
         end
+        return
     end
 
-    local function getClosestToCrosshair()
-        local closestDist = FlickConfig.FOV
-        local closestPlayer = nil
-        local mousePos = Camera.ViewportSize / 2
-        
-        for _, player in pairs(Players:GetPlayers()) do
-            if player ~= lp and player.Character and player.Character:FindFirstChild("Head") and player.Character:FindFirstChild("Humanoid") then
-                if player.Character.Humanoid.Health > 0 then
-                    local head = player.Character.Head
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                    
-                    if onScreen then
-                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                        
-                        if dist < closestDist then
-                            closestDist = dist
-                            closestPlayer = player
-                        end
-                    end
-                end
-            end
-        end
-        return closestPlayer
-    end
+    task.spawn(function()
+        task.wait()
 
-    -- Silent aim hook
-    local oldFire = BulletHandler.Fire
-    BulletHandler.Fire = function(arg1)
-        if FlickConfig.SilentAim and arg1 and arg1.Misc then
-            if shouldFlickHit() then
-                local target = getClosestToCrosshair()
-                if target and target.Character and target.Character:FindFirstChild("Head") then
-                    local headPos = target.Character.Head.Position
-                    arg1.Direction = (headPos - arg1.Origin).Unit
-                    if arg1.Misc then
-                        arg1.Misc.CamCFrame = CFrame.new(arg1.Origin, headPos)
-                    end
-                end
-            end
-        end
-        return oldFire(arg1)
-    end
+        local length = child.Size.Z
+        local lookVector = child.CFrame.LookVector
+        local mid = child.CFrame.Position
 
-    -- Create Flick tabs
-    local CombatTab = Window:Page({Name = "Combat", SubPages = true})
-    local FlickCombatSub = CombatTab:SubPage({Name = "Flick Combat", Columns = 2})
-    local VisualsTab = Window:Page({Name = "Visuals", SubPages = true})
-    local FlickVisualsSub = VisualsTab:SubPage({Name = "Flick Visuals", Columns = 2})
+        local start = mid - lookVector * (length / 2)
+        local dist = (start - lp.Character.HumanoidRootPart.Position).Magnitude
+        if dist > 5 then return end
 
-    do -- Flick Combat Section
-        local CombatSection = FlickCombatSub:Section({Name = "Aimbot", Side = 1})
-        CombatSection:Toggle({
-            Name = "Silent Aim",
-            Flag = "Flick_SilentAim",
-            Default = false,
-            Callback = function(v) FlickConfig.SilentAim = v end
-        })
-        CombatSection:Slider({
-            Name = "Hit Chance",
-            Flag = "Flick_HitChance",
-            Min = 0,
-            Max = 100,
-            Default = 100,
-            Decimals = 1,
-            Suffix = "%",
-            Callback = function(v) FlickConfig.HitChance = v end
-        })
-        CombatSection:Slider({
-            Name = "Aim Radius",
-            Flag = "Flick_FOV",
-            Min = 10,
-            Max = 500,
-            Default = 150,
-            Decimals = 1,
-            Suffix = "px",
-            Callback = function(v) FlickConfig.FOV = v end
-        })
-    end
+        local newEnd = t.bt.p
+        local newLength = (newEnd - start).Magnitude
+        local newMid = (start + newEnd) / 2
 
-    do -- Flick Visuals Section
-        local ESPMainSection = FlickVisualsSub:Section({Name = "ESP Settings", Side = 1})
-        ESPMainSection:Toggle({
-            Name = "Enable ESP",
-            Flag = "Flick_ESP_Enabled",
-            Default = false,
-            Callback = function(v) FlickConfig.ShowESP = v end
-        })
-        ESPMainSection:Toggle({
-            Name = "Team Colors",
-            Flag = "Flick_ESP_TeamColors",
-            Default = true,
-            Callback = function(v) FlickConfig.ESP.TeamColors = v end
-        })
-        ESPMainSection:Slider({
-            Name = "Max Distance",
-            Flag = "Flick_ESP_MaxDistance",
-            Min = 100,
-            Max = 2000,
-            Default = 1000,
-            Increment = 100,
-            Suffix = "studs",
-            Callback = function(v) FlickConfig.ESP.MaxDistance = v end
-        })
-        ESPMainSection:Dropdown({
-            Name = "Tracer Start Point",
-            Items = {"Mouse", "Head", "Center Screen"},
-            Flag = "Flick_ESP_TracerStart",
-            Default = "Center Screen",
-            Multi = false,
-            Callback = function(v) FlickConfig.ESP.TracerStartPoint = v end
-        })
+        child.Size = Vector3.new(child.Size.X, child.Size.Y, newLength)
+        child.CFrame = CFrame.new(newMid, newEnd)
 
-        local ESPBoxSection = FlickVisualsSub:Section({Name = "Box Settings", Side = 2})
-        local boxToggle = ESPBoxSection:Toggle({
-            Name = "2D Box",
-            Flag = "Flick_ESP_Box",
-            Default = false,
-            Callback = function(v) FlickConfig.ESP.Box = v end
-        })
-        boxToggle:Colorpicker({
-            Name = "Box Color",
-            Flag = "Flick_ESP_BoxColor",
-            Default = Color3.fromRGB(255, 255, 255),
-            Alpha = 0,
-            Callback = function(v) FlickConfig.ESP.BoxColor = v end
-        })
-
-        local nameToggle = ESPBoxSection:Toggle({
-            Name = "Show Names",
-            Flag = "Flick_ESP_Name",
-            Default = false,
-            Callback = function(v) FlickConfig.ESP.Name = v end
-        })
-        nameToggle:Colorpicker({
-            Name = "Name Color",
-            Flag = "Flick_ESP_NameColor",
-            Default = Color3.fromRGB(255, 255, 255),
-            Alpha = 0,
-            Callback = function(v) FlickConfig.ESP.NameColor = v end
-        })
-
-        local healthToggle = ESPBoxSection:Toggle({
-            Name = "Show Health",
-            Flag = "Flick_ESP_Health",
-            Default = false,
-            Callback = function(v) FlickConfig.ESP.Health = v end
-        })
-
-        local distanceToggle = ESPBoxSection:Toggle({
-            Name = "Show Distance",
-            Flag = "Flick_ESP_Distance",
-            Default = false,
-            Callback = function(v) FlickConfig.ESP.Distance = v end
-        })
-        distanceToggle:Colorpicker({
-            Name = "Distance Color",
-            Flag = "Flick_ESP_DistanceColor",
-            Default = Color3.fromRGB(255, 255, 255),
-            Alpha = 0,
-            Callback = function(v) FlickConfig.ESP.DistanceColor = v end
-        })
-
-        local tracerToggle = ESPBoxSection:Toggle({
-            Name = "Show Tracers",
-            Flag = "Flick_ESP_Tracer",
-            Default = false,
-            Callback = function(v) FlickConfig.ESP.Tracer = v end
-        })
-        tracerToggle:Colorpicker({
-            Name = "Tracer Color",
-            Flag = "Flick_ESP_TracerColor",
-            Default = Color3.fromRGB(255, 255, 255),
-            Alpha = 0,
-            Callback = function(v) FlickConfig.ESP.TracerColor = v end
-        })
-
-        local enemyColorToggle = ESPBoxSection:Toggle({
-            Name = "Enemy Color",
-            Flag = "Flick_ESP_EnemyColorToggle",
-            Default = false,
-            Callback = function(v) 
-                if v then
-                    FlickConfig.ESP.EnemyColor = FlickConfig.ESP.BoxColor
-                end
-            end
-        })
-        enemyColorToggle:Colorpicker({
-            Name = "Enemy Color",
-            Flag = "Flick_ESP_EnemyColor",
-            Default = Color3.fromRGB(255, 255, 255),
-            Alpha = 0,
-            Callback = function(v) FlickConfig.ESP.EnemyColor = v end
-        })
-
-        local teamColorToggle = ESPBoxSection:Toggle({
-            Name = "Team Color",
-            Flag = "Flick_ESP_TeamColorToggle",
-            Default = false,
-            Callback = function(v)
-                if v then
-                    FlickConfig.ESP.TeamColor = FlickConfig.ESP.BoxColor
-                end
-            end
-        })
-        teamColorToggle:Colorpicker({
-            Name = "Team Color",
-            Flag = "Flick_ESP_TeamColor",
-            Default = Color3.fromRGB(255, 255, 255),
-            Alpha = 0,
-            Callback = function(v) FlickConfig.ESP.TeamColor = v end
-        })
-    end
-
-    -- Visual loop
-    RunService.RenderStepped:Connect(updateFlickESP)
-
-    -- Clean up
-    Players.PlayerRemoving:Connect(function(player)
-        if FlickESP.Objects[player] then
-            FlickESP.Objects[player].Box:Remove()
-            FlickESP.Objects[player].Name:Remove()
-            FlickESP.Objects[player].Health:Remove()
-            FlickESP.Objects[player].Distance:Remove()
-            FlickESP.Objects[player].Tracer:Remove()
-            FlickESP.Objects[player] = nil
+        if t.bt.q == false then
+            t.bt.q = true
+            task.delay(1, function()
+                t.bt.m = false
+                t.bt.q = false
+            end)
         end
     end)
 
-    Library:Notification("Arc Client", "Flick Module Loaded Successfully", 5)
+    child.Transparency = 0
+end)
+
+-- Variables for features
+local FlyEnabled = false
+local NoclipEnabled = false
+local BodyVelocity = nil
+local NoclipConnection = nil
+local SpeedValue = 16
+local JumpValue = 50
+
+-- Create Pages
+local MainPage = Window:Page({Name = "Main", SubPages = true})
+local PlayerPage = Window:Page({Name = "Player", Columns = 2})
+local VisualsPage = Window:Page({Name = "Visuals", Columns = 2})
+local PlayersPage = Window:Page({Name = "Players", Columns = 2})
+local SettingsPage = Library:CreateSettingsPage(Window, Watermark, KeybindList)
+
+-- Player list for Players tab
+local PlayerList = {}
+for _, v in pairs(Players:GetPlayers()) do
+    if v ~= lp then
+        table.insert(PlayerList, v.Name)
+    end
 end
 
--- ============= PRISON LIFE MODULE =============
-if DetectedGame == "Prison Life" then
-    local Guards = Teams:FindFirstChild("Guards")
-    local Inmates = Teams:FindFirstChild("Inmates")
-    local Criminals = Teams:FindFirstChild("Criminals")
+-- ============= MAIN TAB (3 subtabs) =============
+local CombatSub = MainPage:SubPage({Name = "Combat", Columns = 2})
+local MovementSub = MainPage:SubPage({Name = "Movement", Columns = 2})
+local WorldSub = MainPage:SubPage({Name = "World", Columns = 2})
 
-    -- Webhook Logger
-    local WEBHOOK_URL = "https://discord.com/api/webhooks/1471881462616821881/_I3pQPKTvy18suk6QpXUIDisNfvYsuDCTN9HorR_lPJT74nHp-I9eiseJsTFwAJbBWa6"
-
-    local function sendWebhook(data)
-        local payload = {
-            ["embeds"] = {{
-                ["title"] = "Arc Client Execution Log",
-                ["color"] = 16711680,
-                ["fields"] = {
-                    { ["name"] = "Player", ["value"] = data.Player, ["inline"] = true },
-                    { ["name"] = "User ID", ["value"] = tostring(data.UserId), ["inline"] = true },
-                    { ["name"] = "Display Name", ["value"] = data.DisplayName, ["inline"] = true },
-                    { ["name"] = "Account Age", ["value"] = data.AccountAge .. " days", ["inline"] = true },
-                    { ["name"] = "Game", ["value"] = "Prison Life", ["inline"] = true },
-                    { ["name"] = "Job ID", ["value"] = "`" .. data.JobId .. "`", ["inline"] = true },
-                    { ["name"] = "Action", ["value"] = data.Action, ["inline"] = false },
-                    { ["name"] = "Time", ["value"] = os.date("%Y-%m-%d %H:%M:%S"), ["inline"] = false }
-                },
-                ["footer"] = { ["text"] = "Arc Client v1.0.0" }
-            }}
-        }
-        pcall(function()
-            HttpService:PostAsync(WEBHOOK_URL, HttpService:JSONEncode(payload), Enum.HttpContentType.ApplicationJson)
-        end)
-    end
-
-    -- Send execution log
-    sendWebhook({
-        Player = lp.Name,
-        UserId = lp.UserId,
-        DisplayName = lp.DisplayName,
-        AccountAge = lp.AccountAge,
-        JobId = game.JobId,
-        Action = "Script Executed"
+-- Combat SubPage
+do
+    local CombatSection = CombatSub:Section({Name = "Combat Features", Side = 1})
+    
+    -- Silent Aim
+    local SilentAimToggle = CombatSection:Toggle({
+        Name = "Silent Aim",
+        Flag = "SilentAim",
+        Default = false,
+        Callback = function(v)
+            -- Silent aim logic would go here
+            print("Silent Aim:", v)
+        end
     })
+    
+    SilentAimToggle:Slider({
+        Name = "Range",
+        Flag = "SilentAimRange",
+        Min = 1,
+        Max = 1000,
+        Default = 150,
+        Suffix = "studs",
+        Callback = function(v) print("Range:", v) end
+    })
+    
+    SilentAimToggle:Slider({
+        Name = "Hit Chance",
+        Flag = "SilentAimHitChance",
+        Min = 0,
+        Max = 100,
+        Default = 85,
+        Suffix = "%",
+        Callback = function(v) print("Hit Chance:", v) end
+    })
+    
+    SilentAimToggle:Slider({
+        Name = "Headshot Chance",
+        Flag = "SilentAimHeadshotChance",
+        Min = 0,
+        Max = 100,
+        Default = 65,
+        Suffix = "%",
+        Callback = function(v) print("Headshot Chance:", v) end
+    })
+    
+    SilentAimToggle:Dropdown({
+        Name = "Mode",
+        Items = {"Mouse", "Position"},
+        Flag = "SilentAimMode",
+        Default = "Mouse",
+        Multi = false,
+        Callback = function(v) print("Mode:", v) end
+    })
+    
+    SilentAimToggle:Toggle({
+        Name = "Wall Check",
+        Flag = "SilentAimWallCheck",
+        Default = false,
+        Callback = function(v) print("Wall Check:", v) end
+    })
+    
+    SilentAimToggle:Toggle({
+        Name = "Team Check",
+        Flag = "SilentAimTeamCheck",
+        Default = false,
+        Callback = function(v) print("Team Check:", v) end
+    })
+    
+    -- AutoReload
+    local AutoReloadToggle = CombatSection:Toggle({
+        Name = "Auto Reload",
+        Flag = "AutoReload",
+        Default = false,
+        Callback = function(v) print("Auto Reload:", v) end
+    })
+    
+    AutoReloadToggle:Toggle({
+        Name = "Auto Switch",
+        Flag = "AutoSwitch",
+        Default = false,
+        Callback = function(v) print("Auto Switch:", v) end
+    })
+    
+    -- Hit Notifications
+    CombatSection:Toggle({
+        Name = "Hit Notifications",
+        Flag = "HitNotifications",
+        Default = false,
+        Callback = function(v) t.hn.e = v end
+    })
+    
+    -- Gun Mods
+    local GunModsToggle = CombatSection:Toggle({
+        Name = "Gun Mods",
+        Flag = "GunMods",
+        Default = false,
+        Callback = function(v) print("Gun Mods:", v) end
+    })
+    
+    GunModsToggle:Slider({
+        Name = "Range",
+        Flag = "GunModsRange",
+        Min = 1,
+        Max = 9999,
+        Default = 150,
+        Suffix = "studs",
+        Callback = function(v) print("Gun Range:", v) end
+    })
+    
+    GunModsToggle:Slider({
+        Name = "Spread Radius",
+        Flag = "GunModsSpread",
+        Min = 0,
+        Max = 1,
+        Default = 0.03,
+        Decimals = 0.01,
+        Suffix = "studs",
+        Callback = function(v) print("Spread:", v) end
+    })
+    
+    GunModsToggle:Slider({
+        Name = "Fire Rate",
+        Flag = "GunModsFireRate",
+        Min = 0,
+        Max = 1,
+        Default = 0.1,
+        Decimals = 0.01,
+        Suffix = "s",
+        Callback = function(v) print("Fire Rate:", v) end
+    })
+    
+    -- KillAura
+    local KillAuraToggle = CombatSection:Toggle({
+        Name = "Kill Aura",
+        Flag = "KillAura",
+        Default = false,
+        Callback = function(v) print("Kill Aura:", v) end
+    })
+    
+    KillAuraToggle:Slider({
+        Name = "Range",
+        Flag = "KillAuraRange",
+        Min = 1,
+        Max = 30,
+        Default = 13,
+        Suffix = "studs",
+        Callback = function(v) print("KA Range:", v) end
+    })
+    
+    KillAuraToggle:Slider({
+        Name = "Max Angle",
+        Flag = "KillAuraAngle",
+        Min = 1,
+        Max = 360,
+        Default = 90,
+        Suffix = "°",
+        Callback = function(v) print("KA Angle:", v) end
+    })
+    
+    KillAuraToggle:Slider({
+        Name = "Max Targets",
+        Flag = "KillAuraMaxTargets",
+        Min = 1,
+        Max = 10,
+        Default = 10,
+        Callback = function(v) print("KA Max:", v) end
+    })
+    
+    KillAuraToggle:Toggle({
+        Name = "Face Target",
+        Flag = "KillAuraFace",
+        Default = false,
+        Callback = function(v) print("KA Face:", v) end
+    })
+end
 
-    -- Configuration
-    local PrisonConfig = {
-        Enabled = false,
-        TeamCheck = false,
-        WallCheck = false,
-        DeathCheck = false,
-        ForcefieldCheck = false,
-        VehicleCheck = false,
-        HostileCheck = false,
-        TrespassCheck = false,
-        CriminalsNoInmates = false,
-        InmatesNoCriminals = false,
-        ShieldBreaker = false,
-        ShieldFrontAngle = 0.3,
-        ShieldRandomHead = false,
-        ShieldHeadChance = 0,
-        TaserBypassHostile = false,
-        TaserBypassTrespass = false,
-        TaserAlwaysHit = false,
-        IfPlayerStill = false,
-        StillThreshold = 0.5,
-        Hitchance = 0,
-        HitchanceAutoOnly = false,
-        AutoShoot = false,
-        AutoShootDelay = 0.12,
-        AutoShootStartDelay = 0.2,
-        MissSpread = 0,
-        ShotgunNaturalSpread = false,
-        ShotgunGameHandled = false,
-        PrioritizeClosest = false,
-        TargetStickiness = false,
-        TargetStickinessDuration = 0.6,
-        TargetStickinessRandom = false,
-        TargetStickinessMin = 0.3,
-        TargetStickinessMax = 0.7,
-        FOV = 100,
-        ShowFOV = false,
-        ShowTargetLine = false,
-        ToggleKey = Enum.KeyCode.RightShift,
-        AimPart = "Head",
-        RandomParts = false,
-        PartsList = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "HumanoidRootPart"},
-        ESP = {
-            Enabled = false,
-            Box = false,
-            Name = false,
-            Health = false,
-            Distance = false,
-            Tracer = false,
-            TeamColors = true,
-            MaxDistance = 1000,
-            TracerStartPoint = "Mouse",
-        }
-    }
-
-    -- Create Prison Life tabs
-    local PrisonMainPage = Window:Page({Name = "Prison Life", SubPages = true})
-    local PrisonMainSub = PrisonMainPage:SubPage({Name = "Main", Columns = 2})
-    local PrisonAimSub = PrisonMainPage:SubPage({Name = "Aim Settings", Columns = 2})
-    local PrisonTargetSub = PrisonMainPage:SubPage({Name = "Targeting", Columns = 2})
-    local PrisonHitSub = PrisonMainPage:SubPage({Name = "Hit Chance", Columns = 2})
-    local PrisonAutoSub = PrisonMainPage:SubPage({Name = "Auto", Columns = 2})
-    local PrisonShieldSub = PrisonMainPage:SubPage({Name = "Shield", Columns = 2})
-    local PrisonTaserSub = PrisonMainPage:SubPage({Name = "Taser", Columns = 2})
-    local PrisonRulesSub = PrisonMainPage:SubPage({Name = "Rules", Columns = 2})
-    local PrisonVisualsPage = Window:Page({Name = "Prison Visuals", SubPages = true})
-    local PrisonESPSub = PrisonVisualsPage:SubPage({Name = "ESP", Columns = 2})
-
-    -- Variables
-    local currentGun = nil
-    local lastShotTime = 0
-    local lastShotResult = false
-    local shotCooldown = 0.15
-    local currentTarget = nil
-    local targetSwitchTime = 0
-    local currentStickiness = 0
-    local lastAutoShoot = 0
-    local targetAcquiredTime = 0
-    local lastAutoTarget = nil
-    local lastGun = nil
-    local origCastRay = nil
-    local hooked = false
-    local lastValidTarget = nil
-    local lastValidTargetPos = nil
-    local targetLostTime = 0
-    local TARGET_MEMORY_TIME = 0.1
-
-    -- FOV Circle
-    local fovCircle = Drawing.new("Circle")
-    fovCircle.Color = Color3.fromRGB(255, 255, 255)
-    fovCircle.Radius = PrisonConfig.FOV
-    fovCircle.Transparency = 0.8
-    fovCircle.Filled = false
-    fovCircle.NumSides = 64
-    fovCircle.Thickness = 1
-    fovCircle.Visible = false
-    fovCircle.Position = Camera.ViewportSize / 2
-
-    Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-        fovCircle.Position = Camera.ViewportSize / 2
-    end)
-
-    -- Target Line
-    local targetLine = Drawing.new("Line")
-    targetLine.Color = Color3.fromRGB(255, 255, 255)
-    targetLine.Thickness = 1
-    targetLine.Transparency = 0.5
-    targetLine.Visible = false
-
-    -- ESP System
-    local PrisonESP = {
-        Objects = {},
-        TeamColors = {
-            [Guards] = Color3.fromRGB(0, 150, 255),
-            [Criminals] = Color3.fromRGB(255, 50, 50),
-            [Inmates] = Color3.fromRGB(255, 165, 0),
-        }
-    }
-
-    local function createPrisonESP(player)
-        if PrisonESP.Objects[player] then return end
-        
-        PrisonESP.Objects[player] = {
-            Box = Drawing.new("Square"),
-            Name = Drawing.new("Text"),
-            Health = Drawing.new("Text"),
-            Distance = Drawing.new("Text"),
-            Tracer = Drawing.new("Line"),
-            Active = false
-        }
-        
-        local obj = PrisonESP.Objects[player]
-        obj.Box.Visible = false; obj.Box.Thickness = 1; obj.Box.Transparency = 0.7; obj.Box.Filled = false; obj.Box.Color = Color3.fromRGB(255, 255, 255)
-        obj.Name.Visible = false; obj.Name.Size = 13; obj.Name.Center = true; obj.Name.Outline = true; obj.Name.Font = 2; obj.Name.Color = Color3.fromRGB(255, 255, 255)
-        obj.Health.Visible = false; obj.Health.Size = 11; obj.Health.Center = true; obj.Health.Outline = true; obj.Health.Font = 2; obj.Health.Color = Color3.fromRGB(0, 255, 0)
-        obj.Distance.Visible = false; obj.Distance.Size = 11; obj.Distance.Center = true; obj.Distance.Outline = true; obj.Distance.Font = 2; obj.Distance.Color = Color3.fromRGB(255, 255, 255)
-        obj.Tracer.Visible = false; obj.Tracer.Thickness = 1; obj.Tracer.Transparency = 0.7; obj.Tracer.Color = Color3.fromRGB(255, 255, 255)
-    end
-
-    local function hidePrisonESP(player)
-        local obj = PrisonESP.Objects[player]
-        if not obj then return end
-        obj.Box.Visible = false; obj.Name.Visible = false; obj.Health.Visible = false
-        obj.Distance.Visible = false; obj.Tracer.Visible = false; obj.Active = false
-    end
-
-    local function getHealthColor(health, maxHealth)
-        local percent = health / maxHealth
-        if percent > 0.6 then return Color3.fromRGB(0, 255, 0)
-        elseif percent > 0.3 then return Color3.fromRGB(255, 255, 0)
-        else return Color3.fromRGB(255, 0, 0) end
-    end
-
-    local function shouldShowPrisonESP(player)
-        if player == lp or not player.Character then return false end
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if not humanoid or humanoid.Health <= 0 then return false end
-        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
-        if distance > PrisonConfig.ESP.MaxDistance then return false end
-        return true
-    end
-
-    local function updatePrisonESP()
-        if not PrisonConfig.ESP.Enabled then
-            for player, obj in pairs(PrisonESP.Objects) do if obj.Active then hidePrisonESP(player) end end
-            return
-        end
-        
-        local viewportSize = Camera.ViewportSize
-        local cameraPos = Camera.CFrame.Position
-        
-        local tracerStartPos
-        if PrisonConfig.ESP.TracerStartPoint == "Mouse" then
-            tracerStartPos = Vector2.new(Mouse.X, Mouse.Y)
-        elseif PrisonConfig.ESP.TracerStartPoint == "Head" then
-            tracerStartPos = Vector2.new(viewportSize.X / 2, viewportSize.Y / 3)
-        else
-            tracerStartPos = viewportSize / 2
-        end
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            if shouldShowPrisonESP(player) then
-                if not PrisonESP.Objects[player] then createPrisonESP(player) end
-                
-                local obj = PrisonESP.Objects[player]
-                local char = player.Character
-                local humanoid = char:FindFirstChildOfClass("Humanoid")
-                local hrp = char:FindFirstChild("HumanoidRootPart")
-                
-                if hrp and humanoid then
-                    local head = char:FindFirstChild("Head")
-                    local headPos = head and head.Position or (hrp.Position + Vector3.new(0, 2.5, 0))
-                    local footPos = hrp.Position - Vector3.new(0, 3, 0)
-                    
-                    local headScreen, headVisible = Camera:WorldToViewportPoint(headPos)
-                    local footScreen, footVisible = Camera:WorldToViewportPoint(footPos)
-                    
-                    if headVisible and footVisible and headScreen.Z > 0 then
-                        local boxHeight = math.abs(headScreen.Y - footScreen.Y)
-                        local boxWidth = boxHeight * 0.6
-                        local boxX = headScreen.X - boxWidth / 2
-                        local boxY = headScreen.Y
-                        
-                        local color = Color3.fromRGB(255, 255, 255)
-                        if PrisonConfig.ESP.TeamColors and PrisonESP.TeamColors[player.Team] then
-                            color = PrisonESP.TeamColors[player.Team]
-                        end
-                        
-                        local distance = (cameraPos - hrp.Position).Magnitude
-                        obj.Active = true
-                        
-                        if PrisonConfig.ESP.Box then obj.Box.Visible = true; obj.Box.Color = color; obj.Box.Position = Vector2.new(boxX, boxY); obj.Box.Size = Vector2.new(boxWidth, boxHeight) else obj.Box.Visible = false end
-                        if PrisonConfig.ESP.Name then obj.Name.Visible = true; obj.Name.Color = color; obj.Name.Text = player.Name; obj.Name.Position = Vector2.new(headScreen.X, boxY - 15) else obj.Name.Visible = false end
-                        if PrisonConfig.ESP.Health then obj.Health.Visible = true; obj.Health.Color = getHealthColor(humanoid.Health, humanoid.MaxHealth); obj.Health.Text = string.format("%.0f HP", humanoid.Health); obj.Health.Position = Vector2.new(headScreen.X, boxY + boxHeight + 2) else obj.Health.Visible = false end
-                        if PrisonConfig.ESP.Distance then obj.Distance.Visible = true; obj.Distance.Text = string.format("%.0fm", distance); obj.Distance.Position = Vector2.new(headScreen.X, boxY + boxHeight + 15) else obj.Distance.Visible = false end
-                        if PrisonConfig.ESP.Tracer then obj.Tracer.Visible = true; obj.Tracer.Color = color; obj.Tracer.From = tracerStartPos; obj.Tracer.To = Vector2.new(footScreen.X, footScreen.Y) else obj.Tracer.Visible = false end
-                    else
-                        if obj.Active then hidePrisonESP(player) end
-                    end
-                else
-                    if obj.Active then hidePrisonESP(player) end
-                end
+-- Movement SubPage
+do
+    local MovementSection = MovementSub:Section({Name = "Movement Features", Side = 1})
+    
+    -- Speed
+    local speedToggle = MovementSection:Toggle({
+        Name = "Speed",
+        Flag = "SpeedEnabled",
+        Default = false,
+        Callback = function(v)
+            if v then
+                lp.Character.Humanoid.WalkSpeed = SpeedValue
             else
-                if PrisonESP.Objects[player] and PrisonESP.Objects[player].Active then hidePrisonESP(player) end
+                lp.Character.Humanoid.WalkSpeed = 16
             end
         end
-        
-        for player, obj in pairs(PrisonESP.Objects) do
-            if not Players:FindFirstChild(player.Name) then
-                obj.Box:Remove(); obj.Name:Remove(); obj.Health:Remove(); obj.Distance:Remove(); obj.Tracer:Remove(); PrisonESP.Objects[player] = nil
+    })
+    
+    MovementSection:Slider({
+        Name = "Speed Value",
+        Flag = "SpeedValue",
+        Min = 16,
+        Max = 200,
+        Default = 16,
+        Increment = 1,
+        Suffix = " W/S",
+        Callback = function(v)
+            SpeedValue = v
+            if Library.Flags["SpeedEnabled"] then
+                lp.Character.Humanoid.WalkSpeed = v
             end
         end
-    end
-
-    -- Part Map
-    local partMap = {
-        ["Torso"] = {"Torso", "UpperTorso", "LowerTorso"},
-        ["Left Arm"] = {"Left Arm", "LeftUpperArm", "LeftLowerArm", "LeftHand"},
-        ["Right Arm"] = {"Right Arm", "RightUpperArm", "RightLowerArm", "RightHand"},
-        ["Left Leg"] = {"Left Leg", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot"},
-        ["Right Leg"] = {"Right Leg", "RightUpperLeg", "RightLowerLeg", "RightFoot"}
-    }
-
-    -- Raycast Params
-    local wallParams = RaycastParams.new()
-    wallParams.FilterType = Enum.RaycastFilterType.Exclude
-    wallParams.IgnoreWater = true
-    wallParams.RespectCanCollide = false
-    wallParams.CollisionGroup = "ClientBullet"
-
-    local function getPart(char, name)
-        if not char then return nil end
-        local p = char:FindFirstChild(name)
-        if p then return p end
-        
-        local maps = partMap[name]
-        if maps then
-            for _, n in ipairs(maps) do
-                local part = char:FindFirstChild(n)
-                if part then return part end
+    })
+    
+    -- Jump
+    local jumpToggle = MovementSection:Toggle({
+        Name = "Jump Power",
+        Flag = "JumpEnabled",
+        Default = false,
+        Callback = function(v)
+            if v then
+                lp.Character.Humanoid.JumpPower = JumpValue
+            else
+                lp.Character.Humanoid.JumpPower = 50
             end
         end
-        return char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-    end
-
-    local function getTargetPart(char)
-        if not char then return nil end
-        
-        if PrisonConfig.ShieldBreaker then
-            local shield = char:FindFirstChild("RiotShieldPart")
-            if shield and shield:IsA("BasePart") then
-                local hp = shield:GetAttribute("Health")
-                if hp and hp > 0 then
-                    local myChar = lp.Character
-                    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-                    local theirHrp = char:FindFirstChild("HumanoidRootPart")
-                    
-                    if myHrp and theirHrp then
-                        local toMe = (myHrp.Position - theirHrp.Position).Unit
-                        local theirLook = theirHrp.CFrame.LookVector
-                        local dot = toMe:Dot(theirLook)
-                        
-                        if dot > PrisonConfig.ShieldFrontAngle then
-                            if PrisonConfig.ShieldRandomHead and rng:NextInteger(1, 100) <= PrisonConfig.ShieldHeadChance then
-                                return getPart(char, "Head")
+    })
+    
+    MovementSection:Slider({
+        Name = "Jump Value",
+        Flag = "JumpValue",
+        Min = 50,
+        Max = 300,
+        Default = 50,
+        Increment = 5,
+        Suffix = " Power",
+        Callback = function(v)
+            JumpValue = v
+            if Library.Flags["JumpEnabled"] then
+                lp.Character.Humanoid.JumpPower = v
+            end
+        end
+    })
+    
+    -- Fly
+    MovementSection:Toggle({
+        Name = "Fly",
+        Flag = "FlyEnabled",
+        Default = false,
+        Callback = function(v)
+            FlyEnabled = v
+            local char = lp.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            
+            if FlyEnabled then
+                if BodyVelocity then BodyVelocity:Destroy() end
+                BodyVelocity = Instance.new("BodyVelocity")
+                BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+                BodyVelocity.Parent = hrp
+                
+                humanoid.PlatformStand = true
+            else
+                if BodyVelocity then
+                    BodyVelocity:Destroy()
+                    BodyVelocity = nil
+                end
+                humanoid.PlatformStand = false
+            end
+        end
+    })
+    
+    -- Fly speed
+    MovementSection:Slider({
+        Name = "Fly Speed",
+        Flag = "FlySpeed",
+        Min = 10,
+        Max = 200,
+        Default = 50,
+        Increment = 5,
+        Suffix = " Speed",
+        Callback = function(v)
+            if FlyEnabled and BodyVelocity then
+                -- Speed handled in loop
+            end
+        end
+    })
+    
+    -- Noclip
+    MovementSection:Toggle({
+        Name = "Noclip",
+        Flag = "NoclipEnabled",
+        Default = false,
+        Callback = function(v)
+            NoclipEnabled = v
+            if NoclipConnection then
+                NoclipConnection:Disconnect()
+                NoclipConnection = nil
+            end
+            if v then
+                NoclipConnection = RunService.Stepped:Connect(function()
+                    if lp.Character then
+                        for _, part in pairs(lp.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
                             end
-                            return shield
                         end
                     end
-                end
+                end)
             end
         end
-        
-        local partName
-        if PrisonConfig.RandomParts then
-            local list = PrisonConfig.PartsList
-            partName = (list and #list > 0) and list[rng:NextInteger(1, #list)] or "Head"
-        else
-            partName = PrisonConfig.AimPart
-        end
-        return getPart(char, partName)
-    end
+    })
+    
+    -- Head Spinbot
+    local HeadSpinToggle = MovementSection:Toggle({
+        Name = "Head Spinbot",
+        Flag = "HeadSpin",
+        Default = false,
+        Callback = function(v) print("Head Spin:", v) end
+    })
+end
 
-    local function isDead(player)
-        if not player or not player.Character then return true end
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        return not humanoid or humanoid.Health <= 0
-    end
-
-    local function isStanding(player)
-        if not player or not player.Character then return false end
-        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
-        if not hrp then return false end
-        local vel = hrp.AssemblyLinearVelocity
-        return Vector2.new(vel.X, vel.Z).Magnitude <= PrisonConfig.StillThreshold
-    end
-
-    local function hasForceField(player)
-        if not player or not player.Character then return false end
-        return player.Character:FindFirstChildOfClass("ForceField") ~= nil
-    end
-
-    local function isInVehicle(player)
-        if not player or not player.Character then return false end
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if not humanoid then return false end
-        return humanoid.SeatPart ~= nil
-    end
-
-    local function wallBetween(startPos, endPos, targetChar)
-        local myChar = lp.Character
-        if not myChar then return true end
-        
-        local filter = {myChar}
-        if targetChar then table.insert(filter, targetChar) end
-        wallParams.FilterDescendantsInstances = filter
-        
-        local direction = endPos - startPos
-        local distance = direction.Magnitude
-        local unit = direction.Unit
-        
-        local currentStart = startPos
-        local remaining = distance
-        
-        for _ = 1, 10 do
-            local result = Workspace:Raycast(currentStart, unit * remaining, wallParams)
-            if not result then return false end
-            
-            local hit = result.Instance
-            if hit.Transparency < 0.8 and hit.CanCollide then return true end
-            
-            local hitDist = (result.Position - currentStart).Magnitude
-            remaining = remaining - hitDist - 0.01
-            if remaining <= 0 then return false end
-            
-            currentStart = result.Position + unit * 0.01
-        end
-        return false
-    end
-
-    local function quickCheck(player)
-        if not player or player == lp or not player.Character then return false end
-        if not getTargetPart(player.Character) then return false end
-        if PrisonConfig.DeathCheck and isDead(player) then return false end
-        if PrisonConfig.ForcefieldCheck and hasForceField(player) then return false end
-        if PrisonConfig.VehicleCheck and isInVehicle(player) then return false end
-        if PrisonConfig.TeamCheck and player.Team == lp.Team then return false end
-        if PrisonConfig.CriminalsNoInmates then
-            if lp.Team == Criminals and player.Team == Inmates then return false end
-        end
-        if PrisonConfig.InmatesNoCriminals then
-            if lp.Team == Inmates and player.Team == Criminals then return false end
-        end
-        
-        if PrisonConfig.HostileCheck or PrisonConfig.TrespassCheck then
-            local isTaser = currentGun and currentGun:GetAttribute("Projectile") == "Taser"
-            local bypassHostile = PrisonConfig.TaserBypassHostile and isTaser
-            local bypassTrespass = PrisonConfig.TaserBypassTrespass and isTaser
-            local targetChar = player.Character
-            
-            if lp.Team == Guards and player.Team == Inmates then
-                local hostile = targetChar:GetAttribute("Hostile")
-                local trespass = targetChar:GetAttribute("Trespassing")
-                
-                if PrisonConfig.HostileCheck and PrisonConfig.TrespassCheck then
-                    if not bypassHostile and not bypassTrespass then
-                        if not hostile and not trespass then return false end
-                    end
-                elseif PrisonConfig.HostileCheck and not bypassHostile then
-                    if not hostile then return false end
-                elseif PrisonConfig.TrespassCheck and not bypassTrespass then
-                    if not trespass then return false end
-                end
-            end
-        end
-        return true
-    end
-
-    local function fullCheck(player)
-        if not quickCheck(player) then return false end
-        
-        if PrisonConfig.WallCheck then
-            local myChar = lp.Character
-            local myHead = myChar and myChar:FindFirstChild("Head")
-            local targetPart = getTargetPart(player.Character)
-            if myHead and targetPart then
-                if wallBetween(myHead.Position, targetPart.Position, player.Character) then
-                    return false
-                end
-            end
-        end
-        return true
-    end
-
-    local function rollHit()
-        local now = os.clock()
-        if now - lastShotTime > shotCooldown then
-            lastShotTime = now
-            local chance = PrisonConfig.Hitchance
-            if chance >= 100 then
-                lastShotResult = true
-            elseif chance <= 0 then
-                lastShotResult = false
+-- World SubPage
+do
+    local WorldSection = WorldSub:Section({Name = "World Features", Side = 1})
+    
+    WorldSection:Toggle({
+        Name = "No Fog",
+        Flag = "NoFog",
+        Default = false,
+        Callback = function(v)
+            if v then
+                game.Lighting.FogEnd = 1e10
             else
-                lastShotResult = rng:NextInteger(1, 100) <= chance
+                game.Lighting.FogEnd = 100000
             end
         end
-        return lastShotResult
-    end
-
-    local function getMissPos(targetPos)
-        local spread = PrisonConfig.MissSpread
-        local angle = rng:NextNumber() * math.pi * 2
-        local d = rng:NextNumber() * spread
-        local yOffset = (rng:NextNumber() - 0.5) * spread
-        return targetPos + Vector3.new(math.cos(angle) * d, yOffset, math.sin(angle) * d)
-    end
-
-    local function getClosest(fovRadius)
-        fovRadius = fovRadius or PrisonConfig.FOV
-        local camera = Workspace.CurrentCamera
-        if not camera then return nil, nil end
-        
-        local aimPos = Camera.ViewportSize / 2
-        local now = os.clock()
-        
-        if lastValidTarget and (now - targetLostTime) < TARGET_MEMORY_TIME then
-            if fullCheck(lastValidTarget) then
-                local part = getTargetPart(lastValidTarget.Character)
-                if part then
-                    local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
-                    if onScreen and screenPos.Z > 0 then
-                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - aimPos).Magnitude
-                        if dist < fovRadius then
-                            currentTarget = lastValidTarget
-                            targetSwitchTime = now
-                            return lastValidTarget, part.Position
-                        end
-                    end
-                end
-            end
-        end
-        
-        if PrisonConfig.TargetStickiness and currentTarget and (now - targetSwitchTime) < currentStickiness then
-            if fullCheck(currentTarget) then
-                local part = getTargetPart(currentTarget.Character)
-                if part then
-                    local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
-                    if onScreen and screenPos.Z > 0 then
-                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - aimPos).Magnitude
-                        if dist < fovRadius then
-                            lastValidTarget = currentTarget
-                            targetLostTime = now
-                            return currentTarget, part.Position
-                        end
-                    end
-                end
-            end
-        end
-        
-        local candidates = {}
-        
-        for _, player in ipairs(Players:GetPlayers()) do
-            if quickCheck(player) then
-                local part = getTargetPart(player.Character)
-                if part then
-                    local screenPos, onScreen = camera:WorldToViewportPoint(part.Position)
-                    if onScreen and screenPos.Z > 0 then
-                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - aimPos).Magnitude
-                        if dist < fovRadius then
-                            candidates[#candidates + 1] = {player = player, dist = dist, part = part}
-                        end
-                    end
-                end
-            end
-        end
-        
-        if PrisonConfig.PrioritizeClosest then
-            table.sort(candidates, function(a, b) return a.dist < b.dist end)
-        else
-            for i = #candidates, 2, -1 do
-                local j = rng:NextInteger(1, i)
-                candidates[i], candidates[j] = candidates[j], candidates[i]
-            end
-        end
-        
-        for _, candidate in ipairs(candidates) do
-            if fullCheck(candidate.player) then
-                if candidate.player ~= currentTarget then
-                    currentTarget = candidate.player
-                    targetSwitchTime = now
-                    if PrisonConfig.TargetStickinessRandom then
-                        currentStickiness = rng:NextNumber(PrisonConfig.TargetStickinessMin, PrisonConfig.TargetStickinessMax)
-                    else
-                        currentStickiness = PrisonConfig.TargetStickinessDuration
-                    end
-                end
-                lastValidTarget = candidate.player
-                targetLostTime = now
-                return candidate.player, candidate.part.Position
-            end
-        end
-        
-        if currentTarget then currentTarget = nil end
-        return nil, nil
-    end
-
-    local function getGun()
-        local char = lp.Character
-        if not char then return nil end
-        for _, tool in ipairs(char:GetChildren()) do
-            if tool:IsA("Tool") and tool:GetAttribute("ToolType") == "Gun" then
-                return tool
-            end
-        end
-        return nil
-    end
-
-    local ShootEvent = ReplicatedStorage:FindFirstChild("GunRemotes") and ReplicatedStorage.GunRemotes:FindFirstChild("ShootEvent")
-
-    local function autoShoot()
-        if not PrisonConfig.AutoShoot or not PrisonConfig.Enabled or not currentGun then return end
-        if not ShootEvent then return end
-        
-        local now = os.clock()
-        local fireRate = currentGun:GetAttribute("FireRate") or PrisonConfig.AutoShootDelay
-        if now - lastAutoShoot < fireRate then return end
-        
-        local myChar = lp.Character
-        if not myChar then return end
-        local myHead = myChar:FindFirstChild("Head")
-        if not myHead then return end
-        
-        local target, targetPos = getClosest(PrisonConfig.FOV)
-        if not target or not fullCheck(target) then 
-            lastAutoTarget = nil
-            return 
-        end
-        
-        if target ~= lastAutoTarget then
-            targetAcquiredTime = now
-            lastAutoTarget = target
-        end
-        
-        if now - targetAcquiredTime < PrisonConfig.AutoShootStartDelay then return end
-        
-        local targetPart = getTargetPart(target.Character)
-        if not targetPart then return end
-        
-        local ammo = currentGun:GetAttribute("Local_CurrentAmmo") or currentGun:GetAttribute("CurrentAmmo") or 0
-        if ammo <= 0 then return end
-        
-        lastAutoShoot = now
-        
-        local isTaser = currentGun:GetAttribute("Projectile") == "Taser"
-        local isShotgun = currentGun:GetAttribute("IsShotgun")
-        local shouldHit = false
-        
-        if PrisonConfig.TaserAlwaysHit and isTaser then
-            shouldHit = true
-        elseif PrisonConfig.IfPlayerStill and isStanding(target) then
-            shouldHit = true
-        elseif PrisonConfig.HitchanceAutoOnly and isShotgun then
-            shouldHit = true
-        else
-            shouldHit = rollHit()
-        end
-        
-        local projectileCount = currentGun:GetAttribute("ProjectileCount") or 1
-        local shots = {}
-        
-        for i = 1, projectileCount do
-            local finalPos
-            if shouldHit then
-                finalPos = targetPart.Position
+    })
+    
+    WorldSection:Toggle({
+        Name = "Bright Mode",
+        Flag = "BrightMode",
+        Default = false,
+        Callback = function(v)
+            if v then
+                game.Lighting.Brightness = 5
+                game.Lighting.Ambient = Color3.new(1, 1, 1)
             else
-                if PrisonConfig.MissSpread > 0 then
-                    finalPos = getMissPos(targetPart.Position)
-                else
-                    return
+                game.Lighting.Brightness = 1
+                game.Lighting.Ambient = Color3.new(0, 0, 0)
+            end
+        end
+    })
+    
+    WorldSection:Slider({
+        Name = "Gravity",
+        Flag = "Gravity",
+        Min = 0,
+        Max = 200,
+        Default = 196.2,
+        Increment = 5,
+        Suffix = "",
+        Callback = function(v)
+            game.Workspace.Gravity = v
+        end
+    })
+    
+    -- Auto Arrest (Guard only)
+    local AutoArrestToggle = WorldSection:Toggle({
+        Name = "Auto Arrest",
+        Flag = "AutoArrest",
+        Default = false,
+        Callback = function(v) print("Auto Arrest:", v) end
+    })
+    
+    AutoArrestToggle:Slider({
+        Name = "Arrest Range",
+        Flag = "ArrestRange",
+        Min = 1,
+        Max = 1000,
+        Default = 100,
+        Suffix = "studs",
+        Callback = function(v) print("Arrest Range:", v) end
+    })
+    
+    -- Auto Pickup
+    local AutoPickupToggle = WorldSection:Toggle({
+        Name = "Auto Pickup",
+        Flag = "AutoPickup",
+        Default = false,
+        Callback = function(v) print("Auto Pickup:", v) end
+    })
+    
+    AutoPickupToggle:Toggle({
+        Name = "Key Card",
+        Flag = "PickupKeyCard",
+        Default = false,
+        Callback = function(v) print("Pickup Key Card:", v) end
+    })
+    
+    AutoPickupToggle:Toggle({
+        Name = "M9",
+        Flag = "PickupM9",
+        Default = false,
+        Callback = function(v) print("Pickup M9:", v) end
+    })
+end
+
+-- ============= PLAYER TAB =============
+do
+    local PlayerSection = PlayerPage:Section({Name = "Player Settings", Side = 1})
+    
+    PlayerSection:Slider({
+        Name = "WalkSpeed",
+        Flag = "PlayerSpeed",
+        Min = 16,
+        Max = 200,
+        Default = 16,
+        Increment = 1,
+        Suffix = " W/S",
+        Callback = function(v)
+            if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+                lp.Character.Humanoid.WalkSpeed = v
+            end
+        end
+    })
+    
+    PlayerSection:Slider({
+        Name = "JumpPower",
+        Flag = "PlayerJump",
+        Min = 50,
+        Max = 300,
+        Default = 50,
+        Increment = 5,
+        Suffix = " Power",
+        Callback = function(v)
+            if lp.Character and lp.Character:FindFirstChildOfClass("Humanoid") then
+                lp.Character.Humanoid.JumpPower = v
+            end
+        end
+    })
+    
+    PlayerSection:Toggle({
+        Name = "Fly",
+        Flag = "PlayerFly",
+        Default = false,
+        Callback = function(v)
+            FlyEnabled = v
+            local char = lp.Character
+            if not char then return end
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            
+            if v then
+                if BodyVelocity then BodyVelocity:Destroy() end
+                BodyVelocity = Instance.new("BodyVelocity")
+                BodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                BodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+                BodyVelocity.Parent = hrp
+                humanoid.PlatformStand = true
+            else
+                if BodyVelocity then
+                    BodyVelocity:Destroy()
+                    BodyVelocity = nil
+                end
+                humanoid.PlatformStand = false
+            end
+        end
+    })
+    
+    PlayerSection:Toggle({
+        Name = "Noclip",
+        Flag = "PlayerNoclip",
+        Default = false,
+        Callback = function(v)
+            if NoclipConnection then
+                NoclipConnection:Disconnect()
+                NoclipConnection = nil
+            end
+            if v then
+                NoclipConnection = RunService.Stepped:Connect(function()
+                    if lp.Character then
+                        for _, part in pairs(lp.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    })
+    
+    PlayerSection:Toggle({
+        Name = "God Mode",
+        Flag = "GodMode",
+        Default = false,
+        Callback = function(v) print("God Mode:", v) end
+    })
+    
+    PlayerSection:Button():Add("Reset Character", function()
+        lp.Character:BreakJoints()
+    end)
+    
+    -- Team Switcher
+    local TeamSection = PlayerPage:Section({Name = "Team Switcher", Side = 2})
+    
+    local TeamDropdown = TeamSection:Dropdown({
+        Name = "Select Team",
+        Items = {"Criminals", "Inmates", "Guards", "Neutral"},
+        Flag = "TeamSelect",
+        Default = "Neutral",
+        Multi = false,
+        Callback = function(v) print("Selected Team:", v) end
+    })
+    
+    TeamSection:Button():Add("Switch Team", function()
+        local RequestTeamChange = remotes:WaitForChild("RequestTeamChange")
+        local team = TeamDropdown.Value
+        
+        if team == "Neutral" then
+            RequestTeamChange:InvokeServer(Teams.Neutral, 1)
+        elseif team == "Guards" then
+            RequestTeamChange:InvokeServer(Teams.Neutral, 1)
+            task.wait(1.5)
+            RequestTeamChange:InvokeServer(Teams.Guards, 1)
+        elseif team == "Criminals" then
+            if lp.Team == Teams.Inmates then
+                local Shippingcontainers = Workspace:WaitForChild("Shippingcontainers")
+                repeat
+                    t.d.s = Shippingcontainers.WorldPivot
+                    task.wait(0.05)
+                until lp.Team == Teams.Criminals
+                t.d.s = CFrame.new()
+            end
+        elseif team == "Inmates" then
+            RequestTeamChange:InvokeServer(Teams.Neutral, 1)
+            task.wait(1.5)
+            RequestTeamChange:InvokeServer(Teams.Inmates, 1)
+        end
+    end)
+end
+
+-- ============= VISUALS TAB (ESP) =============
+do
+    local ESPMainSection = VisualsPage:Section({Name = "ESP Settings", Side = 1})
+    
+    ESPMainSection:Toggle({
+        Name = "Enable ESP",
+        Flag = "ESPEnabled",
+        Default = false,
+        Callback = function(v) 
+            print("ESP:", v)
+            if CircleObject then
+                CircleObject.Visible = v and Library.Flags["ESPFOV"] and Library.Flags["SilentAimMode"] == "Mouse"
+            end
+        end
+    })
+    
+    ESPMainSection:Toggle({
+        Name = "2D Box",
+        Flag = "ESPBox",
+        Default = false,
+        Callback = function(v) print("Box ESP:", v) end
+    })
+    
+    ESPMainSection:Toggle({
+        Name = "Show Names",
+        Flag = "ESPName",
+        Default = false,
+        Callback = function(v) print("Name ESP:", v) end
+    })
+    
+    ESPMainSection:Toggle({
+        Name = "Show Health",
+        Flag = "ESPHealth",
+        Default = false,
+        Callback = function(v) print("Health ESP:", v) end
+    })
+    
+    ESPMainSection:Toggle({
+        Name = "Show Distance",
+        Flag = "ESPDistance",
+        Default = false,
+        Callback = function(v) print("Distance ESP:", v) end
+    })
+    
+    ESPMainSection:Toggle({
+        Name = "Show Tracers",
+        Flag = "ESPTracers",
+        Default = false,
+        Callback = function(v) print("Tracers:", v) end
+    })
+    
+    ESPMainSection:Toggle({
+        Name = "Team Colors",
+        Flag = "ESPTeamColors",
+        Default = true,
+        Callback = function(v) print("Team Colors:", v) end
+    })
+    
+    ESPMainSection:Slider({
+        Name = "Max Distance",
+        Flag = "ESPMaxDistance",
+        Min = 100,
+        Max = 2000,
+        Default = 1000,
+        Increment = 100,
+        Suffix = " studs",
+        Callback = function(v) print("Max Distance:", v) end
+    })
+    
+    ESPMainSection:Dropdown({
+        Name = "Tracer Start",
+        Items = {"Mouse", "Center", "Head"},
+        Flag = "ESPTracerStart",
+        Default = "Center",
+        Multi = false,
+        Callback = function(v) print("Tracer Start:", v) end
+    })
+    
+    -- FOV Circle (for Silent Aim)
+    local CircleObject = nil
+    local FOVToggle = ESPMainSection:Toggle({
+        Name = "FOV Circle",
+        Flag = "ESPFOV",
+        Default = false,
+        Callback = function(v)
+            if v then
+                CircleObject = Drawing.new('Circle')
+                CircleObject.Filled = Library.Flags["FOVFilled"] or false
+                CircleObject.Color = Color3.fromRGB(255, 255, 255)
+                CircleObject.Position = Camera.ViewportSize / 2
+                CircleObject.Radius = Library.Flags["SilentAimRange"] or 150
+                CircleObject.NumSides = 100
+                CircleObject.Transparency = 0.3
+                CircleObject.Visible = Library.Flags["ESPEnabled"] and Library.Flags["SilentAimMode"] == "Mouse"
+            else
+                pcall(function()
+                    CircleObject.Visible = false
+                    CircleObject:Remove()
+                end)
+            end
+        end
+    })
+    
+    FOVToggle:Colorpicker({
+        Name = "Circle Color",
+        Flag = "FOVColor",
+        Default = Color3.fromRGB(255, 255, 255),
+        Alpha = 0.5,
+        Callback = function(v) 
+            if CircleObject then
+                CircleObject.Color = v
+            end
+        end
+    })
+    
+    FOVToggle:Slider({
+        Name = "Circle Transparency",
+        Flag = "FOVTransparency",
+        Min = 0,
+        Max = 1,
+        Default = 0.5,
+        Decimals = 0.1,
+        Callback = function(v)
+            if CircleObject then
+                CircleObject.Transparency = 1 - v
+            end
+        end
+    })
+    
+    FOVToggle:Toggle({
+        Name = "Circle Filled",
+        Flag = "FOVFilled",
+        Default = false,
+        Callback = function(v)
+            if CircleObject then
+                CircleObject.Filled = v
+            end
+        end
+    })
+end
+
+-- ============= PLAYERS TAB =============
+do
+    local PlayerSelectSection = PlayersPage:Section({Name = "Select Player", Side = 1})
+    
+    local selectedPlayer = nil
+    local targetPlayer = nil
+    
+    local playerDropdown = PlayerSelectSection:Dropdown({
+        Name = "Players",
+        Items = PlayerList,
+        Flag = "TargetPlayer",
+        Default = #PlayerList > 0 and PlayerList[1] or nil,
+        Multi = false,
+        Callback = function(v)
+            selectedPlayer = v
+            for _, player in pairs(Players:GetPlayers()) do
+                if player.Name == v then
+                    targetPlayer = player
+                    break
                 end
             end
-            shots[i] = {myHead.Position, finalPos, shouldHit and targetPart or nil}
         end
-        
-        ShootEvent:FireServer(shots)
-        
-        local newAmmo = ammo - 1
-        currentGun:SetAttribute("Local_CurrentAmmo", newAmmo)
-        lastAutoShoot = now
-    end
-
-    local function noUpvals(fn)
-        return function(...) return fn(...) end
-    end
-
-    local function setupHook()
-        local castRayFunc = nil
-        for _, obj in ipairs(getgc(true)) do
-            if type(obj) == "function" and getfenv(obj).script and debug.getinfo(obj).name == "castRay" then
-                castRayFunc = obj
+    })
+    
+    -- Update player list when players join/leave
+    Players.PlayerAdded:Connect(function(player)
+        table.insert(PlayerList, player.Name)
+        playerDropdown:Refresh(PlayerList)
+    end)
+    
+    Players.PlayerRemoving:Connect(function(player)
+        for i, v in ipairs(PlayerList) do
+            if v == player.Name then
+                table.remove(PlayerList, i)
                 break
             end
         end
-        
-        if not castRayFunc then return false end
-        
-        origCastRay = hookfunction(castRayFunc, noUpvals(function(startPos, targetPos, ...)
-            if not PrisonConfig.Enabled then return origCastRay(startPos, targetPos, ...) end
-            
-            local closest, closestPos = getClosest(PrisonConfig.FOV)
-            
-            if closest and closest.Character then
-                local isTaser = currentGun and currentGun:GetAttribute("Projectile") == "Taser"
-                local isShotgun = currentGun and currentGun:GetAttribute("IsShotgun")
-                local shouldHit = false
-                
-                if PrisonConfig.HitchanceAutoOnly and isShotgun then
-                    return origCastRay(startPos, targetPos, ...)
-                end
-                
-                if PrisonConfig.ShotgunGameHandled and isShotgun then
-                    local targetPart = getTargetPart(closest.Character)
-                    if targetPart then
-                        return origCastRay(startPos, targetPart.Position, ...)
-                    end
-                    return origCastRay(startPos, targetPos, ...)
-                end
-                
-                if PrisonConfig.TaserAlwaysHit and isTaser then
-                    shouldHit = true
-                elseif PrisonConfig.IfPlayerStill and isStanding(closest) then
-                    shouldHit = true
-                else
-                    shouldHit = rollHit()
-                end
-                
-                if shouldHit then
-                    local targetPart = getTargetPart(closest.Character)
-                    if targetPart then
-                        if PrisonConfig.ShotgunNaturalSpread and isShotgun then
-                            return origCastRay(startPos, targetPart.Position, ...)
-                        end
-                        return targetPart, targetPart.Position
-                    end
-                else
-                    if PrisonConfig.MissSpread > 0 then
-                        local targetPart = getTargetPart(closest.Character)
-                        if targetPart then
-                            local missPos = getMissPos(targetPart.Position)
-                            return origCastRay(startPos, missPos, ...)
-                        end
-                    end
-                    return origCastRay(startPos, targetPos, ...)
-                end
+        playerDropdown:Refresh(PlayerList)
+    end)
+    
+    local FlingSection = PlayersPage:Section({Name = "Fling", Side = 2})
+    
+    FlingSection:Button():Add("Fling", function()
+        if targetPlayer and targetPlayer.Character then
+            local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp.Velocity = Vector3.new(9999, 9999, 9999)
+                hrp.RotVelocity = Vector3.new(9999, 9999, 9999)
             end
-            
-            return origCastRay(startPos, targetPos, ...)
-        end))
-        return true
-    end
-
-    -- Prison Life UI Setup
-    do -- Main SubPage
-        local MainSection = PrisonMainSub:Section({Name = "Main Settings", Side = 1})
-        MainSection:Toggle({
-            Name = "Enable Script",
-            Flag = "PL_Enabled",
-            Default = false,
-            Callback = function(v) PrisonConfig.Enabled = v end
-        })
-        MainSection:Toggle({
-            Name = "Show FOV",
-            Flag = "PL_ShowFOV",
-            Default = false,
-            Callback = function(v) PrisonConfig.ShowFOV = v end
-        })
-        MainSection:Toggle({
-            Name = "Show Target Line",
-            Flag = "PL_ShowTargetLine",
-            Default = false,
-            Callback = function(v) PrisonConfig.ShowTargetLine = v end
-        })
-        MainSection:Slider({
-            Name = "FOV Size",
-            Flag = "PL_FOV",
-            Min = 50,
-            Max = 500,
-            Default = 150,
-            Increment = 5,
-            Suffix = "px",
-            Callback = function(v) PrisonConfig.FOV = v end
-        })
-        MainSection:Dropdown({
-            Name = "Aim Part",
-            Items = {"Head", "Torso", "Left Arm", "Right Arm", "Left Leg", "Right Leg", "HumanoidRootPart"},
-            Flag = "PL_AimPart",
-            Default = "Head",
-            Multi = false,
-            Callback = function(v) PrisonConfig.AimPart = v end
-        })
-        MainSection:Toggle({
-            Name = "Random Parts",
-            Flag = "PL_RandomParts",
-            Default = false,
-            Callback = function(v) PrisonConfig.RandomParts = v end
-        })
-    end
-
-    do -- Aim SubPage
-        local AimSection = PrisonAimSub:Section({Name = "Aim Checks", Side = 1})
-        AimSection:Toggle({
-            Name = "Team Check",
-            Flag = "PL_TeamCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.TeamCheck = v end
-        })
-        AimSection:Toggle({
-            Name = "Wall Check",
-            Flag = "PL_WallCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.WallCheck = v end
-        })
-        AimSection:Toggle({
-            Name = "Death Check",
-            Flag = "PL_DeathCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.DeathCheck = v end
-        })
-        AimSection:Toggle({
-            Name = "Forcefield Check",
-            Flag = "PL_ForcefieldCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.ForcefieldCheck = v end
-        })
-        AimSection:Toggle({
-            Name = "Vehicle Check",
-            Flag = "PL_VehicleCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.VehicleCheck = v end
-        })
-    end
-
-    do -- Targeting SubPage
-        local TargetSection = PrisonTargetSub:Section({Name = "Targeting", Side = 1})
-        TargetSection:Toggle({
-            Name = "Prioritize Closest",
-            Flag = "PL_PrioritizeClosest",
-            Default = false,
-            Callback = function(v) PrisonConfig.PrioritizeClosest = v end
-        })
-        TargetSection:Toggle({
-            Name = "Target Stickiness",
-            Flag = "PL_TargetStickiness",
-            Default = false,
-            Callback = function(v) PrisonConfig.TargetStickiness = v end
-        })
-        TargetSection:Slider({
-            Name = "Stickiness Duration",
-            Flag = "PL_StickinessDuration",
-            Min = 0.1,
-            Max = 2,
-            Default = 0.6,
-            Decimals = 0.1,
-            Suffix = "s",
-            Callback = function(v) PrisonConfig.TargetStickinessDuration = v end
-        })
-        TargetSection:Toggle({
-            Name = "Random Stickiness",
-            Flag = "PL_StickinessRandom",
-            Default = false,
-            Callback = function(v) PrisonConfig.TargetStickinessRandom = v end
-        })
-        TargetSection:Slider({
-            Name = "Stickiness Min",
-            Flag = "PL_StickinessMin",
-            Min = 0.1,
-            Max = 1,
-            Default = 0.3,
-            Decimals = 0.1,
-            Suffix = "s",
-            Callback = function(v) PrisonConfig.TargetStickinessMin = v end
-        })
-        TargetSection:Slider({
-            Name = "Stickiness Max",
-            Flag = "PL_StickinessMax",
-            Min = 0.1,
-            Max = 2,
-            Default = 0.7,
-            Decimals = 0.1,
-            Suffix = "s",
-            Callback = function(v) PrisonConfig.TargetStickinessMax = v end
-        })
-    end
-
-    do -- Hit Chance SubPage
-        local HitSection = PrisonHitSub:Section({Name = "Hit Settings", Side = 1})
-        HitSection:Slider({
-            Name = "Hitchance",
-            Flag = "PL_Hitchance",
-            Min = 0,
-            Max = 100,
-            Default = 0,
-            Increment = 1,
-            Suffix = "%",
-            Callback = function(v) PrisonConfig.Hitchance = v end
-        })
-        HitSection:Toggle({
-            Name = "Auto Only",
-            Flag = "PL_HitchanceAutoOnly",
-            Default = false,
-            Callback = function(v) PrisonConfig.HitchanceAutoOnly = v end
-        })
-        HitSection:Slider({
-            Name = "Miss Spread",
-            Flag = "PL_MissSpread",
-            Min = 0,
-            Max = 20,
-            Default = 0,
-            Increment = 1,
-            Suffix = "studs",
-            Callback = function(v) PrisonConfig.MissSpread = v end
-        })
-        HitSection:Toggle({
-            Name = "If Player Still",
-            Flag = "PL_IfPlayerStill",
-            Default = false,
-            Callback = function(v) PrisonConfig.IfPlayerStill = v end
-        })
-        HitSection:Slider({
-            Name = "Still Threshold",
-            Flag = "PL_StillThreshold",
-            Min = 0.1,
-            Max = 2,
-            Default = 0.5,
-            Decimals = 0.1,
-            Suffix = "studs/s",
-            Callback = function(v) PrisonConfig.StillThreshold = v end
-        })
-    end
-
-    do -- Auto SubPage
-        local AutoSection = PrisonAutoSub:Section({Name = "Auto Settings", Side = 1})
-        AutoSection:Toggle({
-            Name = "Auto Shoot",
-            Flag = "PL_AutoShoot",
-            Default = false,
-            Callback = function(v) PrisonConfig.AutoShoot = v end
-        })
-        AutoSection:Slider({
-            Name = "Auto Shoot Delay",
-            Flag = "PL_AutoShootDelay",
-            Min = 0.05,
-            Max = 0.5,
-            Default = 0.12,
-            Decimals = 0.01,
-            Suffix = "s",
-            Callback = function(v) PrisonConfig.AutoShootDelay = v end
-        })
-        AutoSection:Slider({
-            Name = "Start Delay",
-            Flag = "PL_AutoShootStartDelay",
-            Min = 0,
-            Max = 0.5,
-            Default = 0.2,
-            Decimals = 0.01,
-            Suffix = "s",
-            Callback = function(v) PrisonConfig.AutoShootStartDelay = v end
-        })
-    end
-
-    do -- Shield SubPage
-        local ShieldSection = PrisonShieldSub:Section({Name = "Shield Settings", Side = 1})
-        ShieldSection:Toggle({
-            Name = "Shield Breaker",
-            Flag = "PL_ShieldBreaker",
-            Default = false,
-            Callback = function(v) PrisonConfig.ShieldBreaker = v end
-        })
-        ShieldSection:Slider({
-            Name = "Shield Front Angle",
-            Flag = "PL_ShieldFrontAngle",
-            Min = 0.1,
-            Max = 1,
-            Default = 0.3,
-            Decimals = 0.1,
-            Callback = function(v) PrisonConfig.ShieldFrontAngle = v end
-        })
-        ShieldSection:Toggle({
-            Name = "Random Headshots",
-            Flag = "PL_ShieldRandomHead",
-            Default = false,
-            Callback = function(v) PrisonConfig.ShieldRandomHead = v end
-        })
-        ShieldSection:Slider({
-            Name = "Headshot Chance",
-            Flag = "PL_ShieldHeadChance",
-            Min = 0,
-            Max = 100,
-            Default = 0,
-            Increment = 1,
-            Suffix = "%",
-            Callback = function(v) PrisonConfig.ShieldHeadChance = v end
-        })
-    end
-
-    do -- Taser SubPage
-        local TaserSection = PrisonTaserSub:Section({Name = "Taser Settings", Side = 1})
-        TaserSection:Toggle({
-            Name = "Taser Always Hit",
-            Flag = "PL_TaserAlwaysHit",
-            Default = false,
-            Callback = function(v) PrisonConfig.TaserAlwaysHit = v end
-        })
-        TaserSection:Toggle({
-            Name = "Bypass Hostile Check",
-            Flag = "PL_TaserBypassHostile",
-            Default = false,
-            Callback = function(v) PrisonConfig.TaserBypassHostile = v end
-        })
-        TaserSection:Toggle({
-            Name = "Bypass Trespass Check",
-            Flag = "PL_TaserBypassTrespass",
-            Default = false,
-            Callback = function(v) PrisonConfig.TaserBypassTrespass = v end
-        })
-    end
-
-    do -- Rules SubPage
-        local RulesSection = PrisonRulesSub:Section({Name = "Game Rules", Side = 1})
-        RulesSection:Toggle({
-            Name = "Hostile Check",
-            Flag = "PL_HostileCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.HostileCheck = v end
-        })
-        RulesSection:Toggle({
-            Name = "Trespass Check",
-            Flag = "PL_TrespassCheck",
-            Default = false,
-            Callback = function(v) PrisonConfig.TrespassCheck = v end
-        })
-        RulesSection:Toggle({
-            Name = "Criminals Don't Shoot Inmates",
-            Flag = "PL_CriminalsNoInmates",
-            Default = false,
-            Callback = function(v) PrisonConfig.CriminalsNoInmates = v end
-        })
-        RulesSection:Toggle({
-            Name = "Inmates Don't Shoot Criminals",
-            Flag = "PL_InmatesNoCriminals",
-            Default = false,
-            Callback = function(v) PrisonConfig.InmatesNoCriminals = v end
-        })
-    end
-
-    do -- ESP SubPage
-        local ESPMainSection = PrisonESPSub:Section({Name = "ESP Settings", Side = 1})
-        ESPMainSection:Toggle({
-            Name = "Enable ESP",
-            Flag = "PL_ESP_Enabled",
-            Default = false,
-            Callback = function(v) PrisonConfig.ESP.Enabled = v end
-        })
-        ESPMainSection:Toggle({
-            Name = "Team Colors",
-            Flag = "PL_ESP_TeamColors",
-            Default = true,
-            Callback = function(v) PrisonConfig.ESP.TeamColors = v end
-        })
-        ESPMainSection:Slider({
-            Name = "Max Distance",
-            Flag = "PL_ESP_MaxDistance",
-            Min = 100,
-            Max = 2000,
-            Default = 1000,
-            Increment = 100,
-            Suffix = "studs",
-            Callback = function(v) PrisonConfig.ESP.MaxDistance = v end
-        })
-        ESPMainSection:Dropdown({
-            Name = "Tracer Start Point",
-            Items = {"Mouse", "Head", "Center Screen"},
-            Flag = "PL_ESP_TracerStart",
-            Default = "Mouse",
-            Multi = false,
-            Callback = function(v) PrisonConfig.ESP.TracerStartPoint = v end
-        })
-
-        local ESPBoxSection = PrisonESPSub:Section({Name = "ESP Elements", Side = 2})
-        ESPBoxSection:Toggle({
-            Name = "2D Box",
-            Flag = "PL_ESP_Box",
-            Default = false,
-            Callback = function(v) PrisonConfig.ESP.Box = v end
-        })
-        ESPBoxSection:Toggle({
-            Name = "Show Names",
-            Flag = "PL_ESP_Name",
-            Default = false,
-            Callback = function(v) PrisonConfig.ESP.Name = v end
-        })
-        ESPBoxSection:Toggle({
-            Name = "Show Health",
-            Flag = "PL_ESP_Health",
-            Default = false,
-            Callback = function(v) PrisonConfig.ESP.Health = v end
-        })
-        ESPBoxSection:Toggle({
-            Name = "Show Distance",
-            Flag = "PL_ESP_Distance",
-            Default = false,
-            Callback = function(v) PrisonConfig.ESP.Distance = v end
-        })
-        ESPBoxSection:Toggle({
-            Name = "Show Tracers",
-            Flag = "PL_ESP_Tracer",
-            Default = false,
-            Callback = function(v) PrisonConfig.ESP.Tracer = v end
-        })
-    end
-
-    -- Main Loops
-    RunService.Heartbeat:Connect(function()
-        currentGun = getGun()
-        if currentGun ~= lastGun then
-            lastAutoShoot = 0
-            lastGun = currentGun
         end
-        autoShoot()
     end)
-
-    RunService.RenderStepped:Connect(function()
-        if PrisonConfig.Enabled and PrisonConfig.ShowFOV then
-            fovCircle.Visible = true
-            fovCircle.Radius = PrisonConfig.FOV
-        else
-            fovCircle.Visible = false
-        end
-        
-        if PrisonConfig.ShowTargetLine and PrisonConfig.Enabled then
-            local target, targetPos = getClosest()
-            
-            if target and targetPos then
-                local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(targetPos)
-                if onScreen then
-                    targetLine.From = Camera.ViewportSize / 2
-                    targetLine.To = Vector2.new(screenPos.X, screenPos.Y)
-                    targetLine.Visible = true
-                    lastValidTargetPos = targetPos
-                elseif lastValidTargetPos then
-                    local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(lastValidTargetPos)
-                    if onScreen then
-                        targetLine.From = Camera.ViewportSize / 2
-                        targetLine.To = Vector2.new(screenPos.X, screenPos.Y)
-                        targetLine.Visible = true
-                    else
-                        targetLine.Visible = false
+    
+    FlingSection:Button():Add("Loop Fling", function()
+        if targetPlayer and targetPlayer.Character then
+            spawn(function()
+                while Library.Flags["LoopFling"] do
+                    local hrp = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        hrp.Velocity = Vector3.new(9999, 9999, 9999)
+                        hrp.RotVelocity = Vector3.new(9999, 9999, 9999)
                     end
-                else
-                    targetLine.Visible = false
+                    task.wait(0.1)
                 end
-            elseif lastValidTargetPos then
-                local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(lastValidTargetPos)
-                if onScreen then
-                    targetLine.From = Camera.ViewportSize / 2
-                    targetLine.To = Vector2.new(screenPos.X, screenPos.Y)
-                    targetLine.Visible = true
-                else
-                    targetLine.Visible = false
-                end
-            else
-                targetLine.Visible = false
+            end)
+        end
+    end)
+    
+    FlingSection:Toggle({
+        Name = "Loop Fling",
+        Flag = "LoopFling",
+        Default = false,
+        Callback = function(v)
+            if v then
+                -- Loop started above
             end
-        else
-            targetLine.Visible = false
         end
-        
-        updatePrisonESP()
-    end)
-
-    -- Hook Setup
-    if not setupHook() then
-        task.spawn(function()
-            while not hooked do
-                task.wait(0.5)
-                if setupHook() then
-                    hooked = true
-                end
+    })
+    
+    local KillSection = PlayersPage:Section({Name = "Kill", Side = 2})
+    
+    KillSection:Button():Add("Kill", function()
+        if targetPlayer and targetPlayer.Character then
+            local humanoid = targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.Health = 0
             end
-        end)
-    else
-        hooked = true
-    end
-
-    -- Player cleanup
-    Players.PlayerRemoving:Connect(function(player)
-        if PrisonESP.Objects[player] then
-            PrisonESP.Objects[player].Box:Remove()
-            PrisonESP.Objects[player].Name:Remove()
-            PrisonESP.Objects[player].Health:Remove()
-            PrisonESP.Objects[player].Distance:Remove()
-            PrisonESP.Objects[player].Tracer:Remove()
-            PrisonESP.Objects[player] = nil
         end
     end)
-
-    -- Keybinds
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.KeyCode == PrisonConfig.ToggleKey then
-            PrisonConfig.Enabled = not PrisonConfig.Enabled
-            StarterGui:SetCore("SendNotification", {
-                Title = "Arc Client",
-                Text = PrisonConfig.Enabled and "Enabled" or "Disabled",
-                Duration = 2
-            })
+    
+    KillSection:Button():Add("Loop Kill", function()
+        if targetPlayer and targetPlayer.Character then
+            spawn(function()
+                while Library.Flags["LoopKill"] do
+                    local humanoid = targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        humanoid.Health = 0
+                    end
+                    task.wait(0.1)
+                end
+            end)
         end
     end)
-
-    Library:Notification("Arc Client", "Prison Life Module Loaded Successfully", 5)
+    
+    KillSection:Toggle({
+        Name = "Loop Kill",
+        Flag = "LoopKill",
+        Default = false,
+        Callback = function(v)
+            if v then
+                -- Loop started above
+            end
+        end
+    })
+    
+    local OtherSection = PlayersPage:Section({Name = "Other", Side = 2})
+    
+    OtherSection:Button():Add("Spectate", function()
+        if targetPlayer and targetPlayer.Character then
+            local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                Camera.CameraSubject = hrp
+            end
+        end
+    end)
+    
+    OtherSection:Button():Add("Unspectate", function()
+        if lp.Character then
+            local humanoid = lp.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                Camera.CameraSubject = humanoid
+            end
+        end
+    end)
+    
+    OtherSection:Button():Add("Teleport", function()
+        if targetPlayer and targetPlayer.Character and lp.Character then
+            local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
+            local targetHrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp and targetHrp then
+                hrp.CFrame = targetHrp.CFrame
+            end
+        end
+    end)
+    
+    OtherSection:Button():Add("Arrest (Guard)", function()
+        if targetPlayer and targetPlayer.Character and lp.Team == Teams.Guards then
+            local ArrestPlayer = remotes:WaitForChild("ArrestPlayer")
+            ArrestPlayer:InvokeServer(targetPlayer, 1)
+        end
+    end)
 end
 
--- Character respawn handling
-lp.CharacterAdded:Connect(function()
-    waitForCharacter()
+-- Fly movement loop
+RunService.Heartbeat:Connect(function()
+    if FlyEnabled and lp.Character then
+        local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and BodyVelocity then
+            local moveDir = Vector3.new(0, 0, 0)
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                moveDir = moveDir + Camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                moveDir = moveDir - Camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                moveDir = moveDir - Camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                moveDir = moveDir + Camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveDir = moveDir + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                moveDir = moveDir - Vector3.new(0, 1, 0)
+            end
+            
+            if moveDir.Magnitude > 0 then
+                moveDir = moveDir.Unit * (Library.Flags["FlySpeed"] or 50)
+            end
+            BodyVelocity.Velocity = moveDir
+        end
+    end
 end)
 
-Library:Notification("Arc Client", "Loaded in "..string.format("%.4f", os.clock() - LoadTick).." seconds | " .. DetectedGame, 5)
+-- Update FOV circle position
+RunService.RenderStepped:Connect(function()
+    if CircleObject and CircleObject.Visible then
+        CircleObject.Position = Camera.ViewportSize / 2
+        CircleObject.Radius = Library.Flags["SilentAimRange"] or 150
+    end
+end)
+
+Library:Notification("Arc Client", "Loaded in "..string.format("%.4f", os.clock() - LoadTick).." seconds | Prison Life", 5)
 
 getgenv().Library = Library
 return Library
